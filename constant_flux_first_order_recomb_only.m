@@ -63,25 +63,44 @@ function [pl,ql,pr,qr] = bcfun(xl,ul,xr,ur,t,D,J_0)
     qr = 1;
 end
 
-% Plot snapshots at selected times
+% PLOT 1: Spatial profiles at different times
 figure;
 hold on;
-
-% Select snapshot times (e.g., at 0, 1, 2, 3, 4 time constants)
+% Select snapshot times (e.g., at 0, 0.1, 0.2, 0.5, 1, 2, 5 time constants)
 snapshot_times = [0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0] * t_c;
-
 for i = 1:length(snapshot_times)
-    % Find closest time index
+% Find closest time index
     [~, idx] = min(abs(t - snapshot_times(i)));
-    
-    % Display as multiples of t_c
+% Display as multiples of t_c
     t_normalized = t(idx)/t_c;
     plot(x, sol(idx,:), 'DisplayName', sprintf('t = %.1f t_c', t_normalized), 'LineWidth',2);
 end
-
+function u_ss = steady(x,J_0,D,k)
+    A = J_0/sqrt(D*k);
+    B = sqrt(k/D);
+    u_ss = A .* exp(-B .* x);
+end
+plot(x, steady(x,J_0,D,k), 'DisplayName', 'Steady Analytical', 'Color', 'k','LineWidth', 2, 'LineStyle', '--');
 xlim([0,L]);
 xlabel('x');
 ylabel('u');
+title('Spatial profiles at different times');
+legend('Location', 'best');
+grid on;
+hold off;
+
+% PLOT 2: Temporal evolution at x=0
+figure;
+hold on;
+% Extract u(0,t) from numerical solution (first spatial point)
+u_0_numerical = sol(:,1);
+% Analytical solution: u(0,t) = (J_0/sqrt(D*k)) * erf(sqrt(k*t))
+u_0_analytical = (J_0/sqrt(D*k)) * erf(sqrt(k*t));
+% Plot both
+plot(t/t_c, u_0_numerical, 'o', 'DisplayName', 'Numerical', 'MarkerSize', 6, 'LineWidth', 1.5);
+plot(t/t_c, u_0_analytical, '-', 'DisplayName', 'Analytical', 'LineWidth', 2);
+xlabel('t / t_c');
+ylabel('u(0,t)');
 legend('Location', 'best');
 grid on;
 hold off;

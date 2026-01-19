@@ -14,16 +14,16 @@ J_0 = 1.3e-1; % interfacial flux, mol/m^2-s
 x_c = (D^2 / (2 * k * J_0))^(1/3);
 t_c = (D / (4 * k^2 * J_0^2))^(1/3);
 
-% Define domain length as 9 times x_c
-L = 9*x_c;
+% Define domain length as 20 times x_c
+L = 20*x_c;
 
 % Spatial mesh: 10 points per x_c
 N_x = ceil(10 * L / x_c);
 x = linspace(0, L, N_x);
 
-% Time: solve for 5 time constants
-T_fin = 5*t_c;
-t = linspace(0, T_fin, 50);
+% Time: solve for 40 time constants
+T_fin = 40*t_c;
+t = linspace(0, T_fin, 400);
 % Note: pdepe naturally uses adaptive time-stepping
 
 % Solve
@@ -63,12 +63,12 @@ function [pl,ql,pr,qr] = bcfun(xl,ul,xr,ur,t,D,J_0)
     qr = 1;
 end
 
-% Plot snapshots at selected times
+% PLOT 1: Spatial profiles at different times
 figure;
 hold on;
 
 % Select snapshot times (e.g., at 0, 1, 2, 3, 4 time constants)
-snapshot_times = [0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0] * t_c;
+snapshot_times = [0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 40.0] * t_c;
 
 for i = 1:length(snapshot_times)
     % Find closest time index
@@ -79,9 +79,34 @@ for i = 1:length(snapshot_times)
     plot(x, sol(idx,:), 'DisplayName', sprintf('t = %.1f t_c', t_normalized), 'LineWidth',2);
 end
 
+function u_ss = steady(x,J_0,D,k)
+    A = (3 * J_0^2 / (4 * k * D))^(1/3);
+    B = (k * J_0 / (6 * D^2) )^(1/3);
+    u_ss = A .* (1 + B .* x).^-2;
+end
+plot(x, steady(x,J_0,D,k), 'DisplayName', 'Steady Analytical', 'Color', 'k','LineWidth', 2, 'LineStyle', '--');
+
 xlim([0,L]);
 xlabel('x');
 ylabel('u');
+legend('Location', 'best');
+grid on;
+hold off;
+
+% PLOT 2: Temporal evolution at x=0
+figure;
+hold on;
+% Extract u(0,t) from numerical solution (first spatial point)
+u_0_numerical = sol(:,1);
+% Analytical scaling: u(0,t) ~ J_0 sqrt(t/D)
+u_0_analytical = 1.1*J_0*sqrt(t/D);
+% Plot both
+plot(sqrt(t/t_c), u_0_numerical, 'o', 'DisplayName', 'Numerical', 'MarkerSize', 6, 'LineWidth', 1.5);
+plot(sqrt(t/t_c), u_0_analytical, '-', 'DisplayName', '1.1 x Scaling', 'LineWidth', 2);
+xlabel('sqrt(t / t_c)');
+xlim([0,3]);
+ylim([0,1]);
+ylabel('u(0,t)');
 legend('Location', 'best');
 grid on;
 hold off;
