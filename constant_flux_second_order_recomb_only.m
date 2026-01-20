@@ -99,10 +99,10 @@ hold on;
 % Extract u(0,t) from numerical solution (first spatial point)
 u_0_numerical = sol(:,1);
 % Analytical scaling: u(0,t) ~ J_0 sqrt(t/D)
-u_0_analytical = 1.1*J_0*sqrt(t/D);
+u_0_analytical = (2/sqrt(pi))*J_0*sqrt(t/D);
 % Plot both
 plot(sqrt(t/t_c), u_0_numerical, 'o', 'DisplayName', 'Numerical', 'MarkerSize', 6, 'LineWidth', 1.5);
-plot(sqrt(t/t_c), u_0_analytical, '-', 'DisplayName', '1.1 x Scaling', 'LineWidth', 2);
+plot(sqrt(t/t_c), u_0_analytical, '-', 'DisplayName', 'Diffusion-Only Scaling', 'LineWidth', 2);
 xlabel('sqrt(t / t_c)');
 xlim([0,3]);
 ylim([0,1]);
