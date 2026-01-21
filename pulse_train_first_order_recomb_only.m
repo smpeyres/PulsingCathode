@@ -1,6 +1,6 @@
-% script for calculating transient reaction-diffusion under first-order 
+% script for calculating transient reaction-diffusion under first-order
 % recombination only - no substrate, pulse train flux
-close all;
+clear all;
 
 % Dimensional governing equation: C_t - DC_xx = -k_1 C
 % Boundary conditions: C_x (x=0,t) = -J_0/D & C_x(x=L,t) = 0
@@ -10,21 +10,21 @@ close all;
 D = 7.2e-10; % diffusivity, m^2/s
 k = 1.2e6; % first-order rate constant, 1/s
 J_peak = 2.4e-2; % peak interfacial flux, mol/m^2-s
-freq = 4e3; % Hz - ADJUST THIS to explore different f/k regimes
-duty = 0.1; % duty cycle (fraction of period that flux is on)
+freq = 4e3; % Hz - Adjust freely
+duty = 0.1; % duty cycle - Adjust freely (between 0 and 1)
 
 % Calculate intrinsic length, time scales, period
 x_c = sqrt(D/k);
 t_c = 1/k;
 period = 1/freq; % seconds
 
-% KEY DIMENSIONLESS PARAMETERS
+% Key dimensionless parameters
 f_over_k = freq / k;
-fk_over_duty = f_over_k / duty;
+f_over_k_over_duty = f_over_k / duty;
 
 fprintf('Dimensionless parameters:\n');
 fprintf('  f/k = %.3e\n', f_over_k);
-fprintf('  fk/duty = %.3e\n', fk_over_duty);
+fprintf('  f/k/duty = %.3e\n', f_over_k_over_duty);
 fprintf('  x_c = %.3e m\n', x_c);
 fprintf('  t_c = %.3e s\n', t_c);
 fprintf('  P = %.3e s\n', period);
@@ -39,48 +39,17 @@ x = linspace(0, L, N_x);
 
 % Time domain: solve for enough time to reach periodic steady state
 % Need at least ~5*t_c for steady state
-n_periods = max(10, ceil(1/f_over_k));
+n_periods = max(10, ceil(f_over_k));
 T_fin = n_periods * period;
 
-% For high-quality visualization, use dense sampling
-% Ensure at least 200 points per period, with extra for low duty cycles
-points_per_period = max(200, ceil(500*duty));  % High resolution for clean plots
-
-% Calculate required points
-n_output_points = n_periods * points_per_period;
-
-% Safety check: if too many points, reduce number of periods but maintain resolution
-max_points = 200000;  % Generous limit for smooth plots
-if n_output_points > max_points
-    n_periods = floor(max_points / points_per_period);
-    n_periods = max(10, n_periods);  % But keep at least 10 periods
-    T_fin = n_periods * period;
-    n_output_points = n_periods * points_per_period;
-end
-
-% Build time vector that explicitly includes points during "on" phases
-% This ensures pdepe evaluates the BC during the pulses
-t_points = [];
-for i = 0:n_periods-1
-    % Add points throughout this period, with extra density during "on" phase
-    t_on_start = i * period;
-    t_on_end = i * period + duty * period;
-    t_off_end = (i+1) * period;
-    
-    % Dense sampling during "on"
-    t_on = linspace(t_on_start, t_on_end, ceil(points_per_period * duty));
-    % Sparser during "off"
-    t_off = linspace(t_on_end, t_off_end, ceil(points_per_period * (1-duty)));
-    
-    t_points = [t_points, t_on(1:end-1), t_off(1:end-1)];
-end
-t = [t_points, T_fin];
-n_output_points = length(t);
+% Output times for plotting (actual integration uses MaxStep for accuracy)
+points_per_period = 200;  % Sufficient for smooth plotting
+t = linspace(0, T_fin, n_periods * points_per_period);
 
 fprintf('  Number of periods simulated: %d\n', n_periods);
 fprintf('  T_fin/t_c = %.2f\n', T_fin/t_c);
 fprintf('  Points per period: %d\n', points_per_period);
-fprintf('  Total output points: %d\n', n_output_points);
+fprintf('  Total output points: %d\n', length(t));
 
 % Solve
 m = 0; % Cartesian coordinates
@@ -96,19 +65,41 @@ options = odeset('MaxStep', duty * period / 10);
 
 sol = pdepe(m, pde, ic, bc, x, t, options);
 
-% =========================================================================
-% PLOTTING
-% =========================================================================
+% "Helper" functions
+
+function [c,f,s] = pdefun(x,t,u,dudx,D,k)
+    c = 1;
+    f = D * dudx;
+    s = -k * u;
+end
+
+function u0 = icfun(x)
+    u0 = 0;  % constant initial condition
+end
+
+function [pl,ql,pr,qr] = bcfun(xl,ul,xr,ur,t,D,J_peak,period,duty)
+    % Periodic pulse train for flux at left boudary
+    if rem(t, period) < duty * period
+        J_0 = J_peak;
+    else
+        J_0 = 0;
+    end
+
+    % Left boundary: pulse train flux
+    pl = J_0; % sets the flux, which is positive: J_0 = -D * u_x
+    ql = 1; % coefficient for flux BC; ql = 0 would be Dirichlet BC
+
+    % Right boundary: zero flux
+    pr = 0; % sets flux = 0 at x=L
+    qr = 1;
+end
+
+% Plotting
+
+% Plot 1: Concentration at x=0 over time, showing periodic steady state
 
 % Extract concentration at x=0 for temporal plots
 u_0_numerical = sol(:,1);
-
-figure;
-plot(t/t_c, u_0_numerical);
-xlabel('t / t_c');
-ylabel('u(0,t)');
-title('Full time history - checking convergence');
-grid on;
 
 fprintf('Analytical steady value = %.3e\n', J_peak/sqrt(D*k));
 fprintf('Max numerical = %.3e\n', max(u_0_numerical));
@@ -134,7 +125,7 @@ for i = 0:2
 end
 
 % Analytical limits
-if fk_over_duty < 0.1  % Low frequency quasi-steady regime
+if f_over_k_over_duty < 0.1  % Low frequency quasi-steady regime
     t_plot = t(idx_zoom);
     u_0_analytical = (J_peak/sqrt(D*k)) * ...
         (mod(t_plot - t_zoom_start, period) < duty*period);
@@ -149,25 +140,25 @@ xlim([0, 3]);
 ylim(y_lim);
 xlabel('(t - t_{start}) / P');
 ylabel('u(0,t)');
-title(sprintf('Periodic steady state (f/k=%.2e, fk/a=%.2e)', f_over_k, fk_over_duty));
+title(sprintf('Periodic steady state (f/k=%.2e, f/k/duty=%.2e)', f_over_k, f_over_k_over_duty));
 legend('Location', 'best');
 grid on;
 hold off;
 
-% PLOT: Time-averaged profile
+% Plot 2: Time-averaged concentration profile at periodic steady state
 subplot(1,2,2);
 hold on;
 
 % Calculate time average over last period
-idx_last_period = find(t >= T_fin - period);
-u_time_avg = mean(sol(idx_last_period, :), 1);
+idx_last_period = find(t >= T_fin - period); % indices for last period
+u_time_avg = mean(sol(idx_last_period, :), 1); % calculates time-averaged profile from last period
 
 plot(x/x_c, u_time_avg, 'b-', 'LineWidth', 2, 'DisplayName', 'Numerical (time-avg)');
 
 % Analytical time-averaged profile (works for all f/k)
 u_analytical_avg = (duty*J_peak/sqrt(D*k)) * exp(-x/x_c);
 plot(x/x_c, u_analytical_avg, 'r--', 'LineWidth', 2, ...
-     'DisplayName', 'Analytical (duty × steady)');
+     'DisplayName', 'Analytical (duty x steady)');
 
 xlim([0, L/x_c]);
 xlabel('x / x_c');
@@ -176,47 +167,3 @@ title('Time-averaged concentration profile');
 legend('Location', 'best');
 grid on;
 hold off;
-
-% =========================================================================
-% HELPER FUNCTIONS
-% =========================================================================
-
-function [c,f,s] = pdefun(x,t,u,dudx,D,k)
-    c = 1;
-    f = D * dudx;
-    s = -k * u;
-end
-
-function u0 = icfun(x)
-    u0 = 0;  % constant initial condition
-end
-
-function [pl,ql,pr,qr] = bcfun(xl,ul,xr,ur,t,D,J_peak,period,duty)
-    % Periodic pulse train - robust to floating point errors
-    % Compute which period we're in
-    cycle_num = floor(t / period);
-    t_in_cycle = t - cycle_num * period;  % More accurate than mod for large t
-    
-    if rem(t, period) < duty * period
-        J_0 = J_peak;
-    else
-        J_0 = 0;
-    end
-
-    % % DEBUG: Print more detail
-    % persistent call_count;
-    % if isempty(call_count), call_count = 0; end
-    % call_count = call_count + 1;
-    % if mod(call_count, 1000) == 0
-    %     fprintf('BC call %d: t=%.6e, t_in_cycle=%.6e, duty*P=%.6e, J_0=%.3e\n', ...
-    %             call_count, t, t_in_cycle, duty*period, J_0);
-    % end
-    
-    % Left boundary: pulse train flux
-    pl = J_0;
-    ql = 1;
-    
-    % Right boundary: zero concentration
-    pr = 0;
-    qr = 1;
-end
