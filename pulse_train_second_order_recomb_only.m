@@ -10,7 +10,7 @@ clear all;
 D = 4.9e-9; % diffusivity, m^2/s
 k = 5.5e6; % second-order rate constant, m^3/mol-s
 J_peak = 1.3e-1; % interfacial flux, mol/m^2-s
-freq = 1e2; % Hz - Adjust freely
+freq = 1e8; % Hz - Adjust freely
 duty = 0.5; % duty cycle - Adjust freely (between 0 and 1)
 
 % Calculate intrinsic length, time scales, period
@@ -40,7 +40,7 @@ x = linspace(0, L, N_x);
 
 % Time domain: solve for enough time to reach periodic steady state
 % Need at least ~5*t_c for steady state
-n_periods = max(80, round(20*phi));
+n_periods = max(40, round(20*phi));
 T_fin = n_periods * period;
 
 % Output times for plotting (actual integration uses MaxStep for accuracy)
@@ -156,10 +156,20 @@ u_time_avg = mean(sol(idx_last_period, :), 1); % calculates time-averaged profil
 
 plot(x/x_c, u_time_avg, 'b-', 'LineWidth', 2, 'DisplayName', 'Numerical (time-avg)');
 
-% Analytical time-averaged profile (works for all f/k)
-u_analytical_avg = (3* duty^2 * J_peak^2 /(4 * D * k))^(1/3) * ( (k*duty*J_peak/(6*D^2))^(1/3) * x + 1 ).^(-2);
+% Analytical time-averaged profile (case-dependent)
+if phi_over_duty < 0.1  % Low frequency quasi-steady regime
+    % Simply duty fraction of the on-phase quasi-steady solution
+    u_analytical_avg = duty * (3*J_peak^2 /(4 * D * k))^(1/3) * ...
+        ( (k*J_peak/(6*D^2))^(1/3) * x + 1 ).^(-2);
+    analytical_label = sprintf('Analytical');
+else  % High frequency time-averaged regime
+    u_analytical_avg = (3* duty^2 * J_peak^2 /(4 * D * k))^(1/3) * ...
+        ( (k*duty*J_peak/(6*D^2))^(1/3) * x + 1 ).^(-2);
+    analytical_label = sprintf('Analytical');
+end
+
 plot(x/x_c, u_analytical_avg, 'r--', 'LineWidth', 2, ...
-     'DisplayName', 'Analytical (duty x J_{peak})');
+     'DisplayName', analytical_label);
 
 xlim([0, L/x_c]);
 xlabel('x / x_c');
@@ -168,3 +178,61 @@ title('Time-averaged concentration profile');
 legend('Location', 'best');
 grid on;
 hold off;
+
+% Plot 3: Spatial profiles at different time snapshots within last period
+figure('Position', [100, 550, 1400, 500]);
+
+% Define time snapshots within the last period
+num_snapshots = 6;
+snapshot_fractions = linspace(0, 1 - 1/num_snapshots, num_snapshots);
+snapshot_times = T_fin - period + snapshot_fractions * period;
+
+% Determine colors for snapshots
+colors = parula(num_snapshots);
+
+for i = 1:num_snapshots
+    subplot(2, 3, i);
+    hold on;
+
+    t_snap = snapshot_times(i);
+
+    % Find nearest index in solution
+    [~, idx_snap] = min(abs(t - t_snap));
+
+    % Extract numerical solution at this time
+    u_numerical_snap = sol(idx_snap, :);
+
+    % Calculate analytical solution based on regime
+    % Quasi-steady analytical solution: instantaneous equilibrium
+    if phi_over_duty < 0.1
+        % Low frequency: solution depends on whether flux is "on"
+        phase = mod(t_snap - (T_fin - period), period) / period;
+        if phase < duty
+            % During "on" phase: use quasi-steady solution with J = J_peak
+            u_analytical_snap = (3*J_peak^2 /(4 * D * k))^(1/3) * ...
+                ( (k*J_peak/(6*D^2))^(1/3) * x + 1 ).^(-2);
+        else
+            % During "off" phase: concentration is zero
+            u_analytical_snap = zeros(size(x));
+        end
+    else
+        % High frequency time-averaged regime: use smoothed average profile
+        u_analytical_snap = (3* duty^2 * J_peak^2 /(4 * D * k))^(1/3) * ...
+            ( (k*duty*J_peak/(6*D^2))^(1/3) * x + 1 ).^(-2);
+    end
+
+    % Plot both solutions
+    plot(x/x_c, u_numerical_snap, 'b-', 'LineWidth', 2, 'DisplayName', 'Numerical');
+    plot(x/x_c, u_analytical_snap, 'r--', 'LineWidth', 2, 'DisplayName', 'Analytical');
+
+    phase = mod(t_snap - (T_fin - period), period) / period;
+    phase_pct = 100 * phase;
+
+    xlim([0, L/x_c]);
+    xlabel('x / x_c');
+    ylabel('u(x,t)');
+    title(sprintf('t = %.1f%% of period', phase_pct));
+    legend('Location', 'best');
+    grid on;
+    hold off;
+end
