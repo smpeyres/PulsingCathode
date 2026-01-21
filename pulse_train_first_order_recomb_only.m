@@ -10,8 +10,8 @@ clear all;
 D = 7.2e-10; % diffusivity, m^2/s
 k = 1.2e6; % first-order rate constant, 1/s
 J_peak = 2.4e-2; % peak interfacial flux, mol/m^2-s
-freq = 4e3; % Hz - Adjust freely
-duty = 0.1; % duty cycle - Adjust freely (between 0 and 1)
+freq = 1e2; % Hz - Adjust freely
+duty = 0.5; % duty cycle - Adjust freely (between 0 and 1)
 
 % Calculate intrinsic length, time scales, period
 x_c = sqrt(D/k);
@@ -39,7 +39,7 @@ x = linspace(0, L, N_x);
 
 % Time domain: solve for enough time to reach periodic steady state
 % Need at least ~5*t_c for steady state
-n_periods = max(10, ceil(f_over_k));
+n_periods = max(10, round(10*f_over_k));
 T_fin = n_periods * period;
 
 % Output times for plotting (actual integration uses MaxStep for accuracy)
