@@ -155,7 +155,7 @@ u_time_avg = mean(sol(idx_last_period, :), 1); % calculates time-averaged profil
 
 plot(x/x_c, u_time_avg, 'b-', 'LineWidth', 2, 'DisplayName', 'Numerical (time-avg)');
 
-% Analytical time-averaged profile (works for all f/k)
+% Analytical time-averaged profile (works for all f/k, by chance!)
 u_analytical_avg = (duty*J_peak/sqrt(D*k)) * exp(-x/x_c);
 plot(x/x_c, u_analytical_avg, 'r--', 'LineWidth', 2, ...
      'DisplayName', 'Analytical (duty x steady)');
