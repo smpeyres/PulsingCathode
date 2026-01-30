@@ -2,7 +2,7 @@
 % recombination only - no substrate, steady flux to start
 
 % Dimensional governing equation: C_t - DC_xx = -k_1 C
-% Boundary conditions: C_x (x=0,t) = -J_0/D & C_x(x=L,t) = 0
+% Boundary conditions: C_x (x=0,t) = -J/D & C_x(x=L,t) = 0
 % Initial condition: C (x,t=0) = 0
 
 % Define dimensional parameters : ethylene glycol
