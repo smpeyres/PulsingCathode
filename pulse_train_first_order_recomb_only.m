@@ -41,7 +41,6 @@ else
     n_periods = 10;
 end
 
-% n_periods = max(10, round(10*f_over_k));
 T_fin = n_periods * period;
 
 % Output times for plotting (actual integration uses MaxStep for accuracy)
@@ -135,8 +134,6 @@ if phi < 0.1  % Low frequency quasi-steady regime
 elseif phi > 10  % High frequency time-averaged regime
     yline(duty*J_peak/sqrt(D*k), 'r--', 'LineWidth', 2, 'DisplayName', 'Analytical (time-avg)');
 end
-
-disp(duty*J_peak/sqrt(D*k));
 
 xlim([0, 3]);
 ylim(y_lim);
