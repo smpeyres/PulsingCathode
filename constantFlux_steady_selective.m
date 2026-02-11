@@ -111,14 +111,24 @@ end
 figure;
 hold on;
 
-plot(sol.x/1e-6, sol.y(1,:), 'DisplayName', 'Electron', 'LineWidth',2);
+% plot(sol.x/1e-6, sol.y(1,:), 'DisplayName', 'Electron', 'LineWidth',2);
 plot(sol.x/1e-6, sol.y(3,:), 'DisplayName', 'Substrate', 'LineWidth', 2);
-xlim([2e-10/1e-6,delta/1e-6]);
-ylim([1e-4,1e3]);
+%xlim([2e-10/1e-6,delta/1e-6]);
+xlim([0,delta/1e-6]);
+%ylim([1e-4,1e3]);
+
+xline(xc_1/1e-6, "DisplayName", 'Eq. 8.25a', 'LineStyle','-.', 'Color', 'r', 'LineWidth',2);
+xline(xc_2/1e-6, "DisplayName", 'Eq. 8.25b', 'LineStyle','-.', 'Color', 'b', 'LineWidth',2);
+
+% yline(Ec_1, "DisplayName", 'Eq. 8.26a', 'LineStyle','--', 'Color', 'k', 'LineWidth',2);
+% yline(Ec_2, "DisplayName", 'Eq. 8.26b', 'LineStyle','--', 'Color', 'g', 'LineWidth',2);
+% yline(Ec_3, "DisplayName", 'Eq. 8.26c', 'LineStyle','--', 'Color', 'y', 'LineWidth',2);
+% yline(Ec_4, "DisplayName", 'Eq. 8.26d', 'LineStyle','--', 'Color', 'magenta', 'LineWidth',2);
+
 xlabel('x [um]');
 ylabel('Concentration [mM]');
 legend('Location', 'best');
-xscale log;
-yscale log;
+%xscale log;
+%yscale log;
 grid on;
 hold off;
