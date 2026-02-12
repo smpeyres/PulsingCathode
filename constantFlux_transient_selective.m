@@ -24,16 +24,16 @@ delta = 8.4e-7; % m
 x_e = sqrt(D_e/(k*S_b)); % electron
 x_s = ((D_s*D_e)/(k*J))^(1/3); % substrate
 % Define minimum length scale
-xc_min = min(x_e,x_s);
+xc_min = min([x_e,x_s]);
 
 % calculate timescales
 t_D = (delta^2)/D_s; % substrate diffusion across film
 t_e = (k*S_b)^(-1); % electron
 t_s = (D_e^2/(D_s*k^2*J^2))^(1/3); % substrate
 % Calculate minimum time scale
-tc_min = min(t_D, t_e, t_s);
+tc_min = min([t_D, t_e, t_s]);
 % Calculate maximum time scale
-tc_max = max(t_D, t_e, t_s);
+tc_max = max([t_D, t_e, t_s]);
 
 % # of minimum lengthscales in domain
 numLengths = ceil(delta/xc_min);
@@ -44,17 +44,59 @@ N_x = numPointsPerLength*numLengths;
 % Create uniform mesh
 x = linspace(0,delta,N_x);
 
-% Time: solve for 5 times longest time
-T_fin = 5*tc_max;
-% # of minimum timesscales in T_fin
-numTimes = ceil(T_fin/tc_min);
-% desired number of time steps per minimum timescale
-numPointsPerTime = 10;
-% Calculate total # time steps points
-N_t = numPointsPerTime*numTimes;
-% Create uniform mesh
-t = linspace(0,T_fin,N_t);
-% Note: pdepe naturally uses adaptive time-stepping
+% Time mesh : three segments to capture multi-scale without huge memory
+% Points per segment
+N = 50;
+% Segment 1: resolve electron dynamics, from 0 to 5*t_e
+seg1 = linspace(0, 5*t_e, N);
+% Segment 2: resolve substrate dynamics, from 5*t_e to 5*t_s
+seg2 = linspace(5*t_e, 5*t_s, N);
+% Segment 3: resolve diffusion dynamics, from 5*t_s to 5*t_D
+seg3 = linspace(5*t_s, 5*t_D, N);
+% Concatenate and remove duplicate boundary points
+t = unique([seg1, seg2, seg3]);
 
 % Solve
 m = 0; % Cartesian coordinates
+
+% Using "Solve Systems of PDEs" Example to help
+% https://www.mathworks.com/help/matlab/math/solve-system-of-pdes.html
+
+% code equation
+% here u(1) = E, u(2) = S
+function [c,f,s] = pdefun(x,t,u,dudx,D_e,D_s,k)
+    c = [1; 1];
+    f = [D_e; D_s] .* dudx;
+    F_e = - k * u(1) * u(2);
+    F_s = - k * u(1) * u(2);
+    s = [F_e; F_s];
+end
+
+% code ICs
+function u0 = pdeic(x,S_b)
+    u0 = [0; S_b];
+end
+
+% code BCs
+% Naturally concentration, flux-based
+function [pl,ql,pr,qr] = bcfun(xl,ul,xr,ur,t,J,S_b)
+    % Left boundary: f(1) = -J
+    % Left boundary: f(2) = 0
+    pl = [J; 0];
+    ql = [1; 1]; % defines 'order'
+    
+    % Right boundary: f(1) = 0
+    % Right boundary: u(2) = S_b
+    pr = [0; ur(2) - S_b];
+    qr = [1; 0];
+end
+
+% Function handles
+pde = @(x,t,u,dudx) pdefun(x,t,u,dudx,D_e,D_s,k);
+ic = @(x) pdeic(x,S_b);
+bc = @(xl,ul,xr,ur,t) bcfun(xl,ul,xr,ur,t,J,S_b);
+
+% Solve equation
+sol = pdepe(m,pde,ic,bc,x,t);
+
+% Next up - plotting!
