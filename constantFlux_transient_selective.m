@@ -48,7 +48,7 @@ x = linspace(0,delta,N_x);
 T_fin = 5*tc_max;
 % # of minimum timesscales in T_fin
 numTimes = ceil(T_fin/tc_min);
-% desired number of time steps per minimum lengthscale
+% desired number of time steps per minimum timescale
 numPointsPerTime = 10;
 % Calculate total # time steps points
 N_t = numPointsPerTime*numTimes;
