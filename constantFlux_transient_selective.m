@@ -16,7 +16,7 @@
 k = 1.5e6; % m3 mol-1 s-1
 D_e = 4.9e-9; % m2 s-1
 D_s = 1.1e-9; % m2 s-1
-S_b = 2.0e2; % mol m-3
+S_b = 99; % mol m-3
 J = 1.3e-1; % mol m-2 s-1
 delta = 8.4e-7; % m
 
@@ -99,4 +99,49 @@ bc = @(xl,ul,xr,ur,t) bcfun(xl,ul,xr,ur,t,J,S_b);
 % Solve equation
 sol = pdepe(m,pde,ic,bc,x,t);
 
-% Next up - plotting!
+% PLOT 1: Spatial profiles of electron at different times
+figure;
+hold on;
+% Select snapshot times
+seg_1_e = [0, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0] * t_e;
+seg_2_e = [0.1, 0.2, 0.5, 1.0] * t_s;
+snapshot_times_e = unique([seg_1_e, seg_2_e]);
+for i = 1:length(snapshot_times_e)
+% Find closest time index
+    [~, idx] = min(abs(t - snapshot_times_e(i)));
+% Display as multiples of t_e
+    t_norm_e = t(idx)/t_e;
+    plot(x/1e-9, sol(idx,:,1), 'DisplayName', sprintf('t = %.1f t_e', t_norm_e), 'LineWidth',2);
+end
+
+xlim([0,x_s/1e-9]);
+xlabel('x [nm]');
+ylabel('C_e [mM]');
+legend('Location', 'best');
+grid on;
+hold off;
+
+% PLOT 2: Spatial profiles of substrate at different times
+figure;
+hold on;
+% Select snapshot times 
+seg_1_s = [0, 1.0, 2.0, 5.0] * t_e;
+seg_2_s = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0] * t_s;
+seg_3_s = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0] * t_D;
+snapshot_times_s = unique([seg_1_s, seg_2_s, seg_3_s]);
+for i = 1:length(snapshot_times_s)
+% Find closest time index
+    [~, idx] = min(abs(t - snapshot_times_s(i)));
+% Display as multiples of t_D
+    t_norm_D = t(idx)/t_D;
+    plot(x/1e-6, sol(idx,:,2), 'DisplayName', sprintf('t = %.2f t_D', t_norm_D), 'LineWidth',2);
+end
+
+xline(x_s/1e-6, 'LineWidth', 2, 'Color','k','LineStyle','--', 'DisplayName','x_s')
+xlim([0,delta/1e-6]);
+xlabel('x [um]');
+ylabel('C_s [mM]');
+legend('Location', 'best');
+grid on;
+hold off;
+
