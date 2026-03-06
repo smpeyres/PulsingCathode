@@ -10,23 +10,26 @@ data = pd.DataFrame({
     'stability': [0,   0,   1,   1,   1,   0,   0,   0,   1,   1,   1,   0,   0,   0,   1,   0,   0,   0,   0,   1,   0,   0,   0,   0,   1,   0,   1,   1,   1,   1,   1,   0,   1,   1,   1,   0,   0,   0,   0,   0,   0],
 })
 
+data['i_p'] = 100 * data['I'] / data['D']
+data['t_on'] = 0.01 * data['D'] / data['f']
+
 stable = data[data['stability'] == 1]
 unstable = data[data['stability'] == 0]
 
 fig = go.Figure()
 fig.add_trace(go.Scatter3d(
-    x=stable['I'], y=stable['D'], z=stable['f'],
+    x=stable['i_p'], y=stable['D'], z=stable['t_on'],
     mode='markers', marker=dict(size=5, color='green'),
     name='Stable'))
 fig.add_trace(go.Scatter3d(
-    x=unstable['I'], y=unstable['D'], z=unstable['f'],
+    x=unstable['i_p'], y=unstable['D'], z=unstable['t_on'],
     mode='markers', marker=dict(size=5, color='red', symbol='x'),
     name='Unstable'))
 
 from scipy.spatial import ConvexHull
 
 # Get coordinates of stable points
-points = stable[['I', 'D', 'f']].values
+points = stable[['i_p', 'D', 't_on']].values
 
 hull = ConvexHull(points)
 
@@ -48,15 +51,15 @@ fig.add_trace(go.Mesh3d(
 fig.update_layout(
     scene=dict(
         xaxis=dict(
-            title='Current (A)',  # your label
-            type='linear'  # or 'log'
+            title='Peak Current (mA)',  # your label
+            type='log'  # or 'log'
         ),
         yaxis=dict(
-            title='Duty Cycle',
+            title='Duty Cycle (%)',
             type='log'  # or 'log'
         ),
         zaxis=dict(
-            title='Frequency (Hz)',
+            title='On time (s)',
             type='log'  # or 'linear'
         )
     )
@@ -64,3 +67,21 @@ fig.update_layout(
 
 
 fig.write_html("stability_plot_EG00.html")
+
+# Check data to see if any points are stable with D > 50%
+high_duty_stable = data[(data['stability'] == 1) & (data['D'] > 50)]
+print(f"\nStable points with D > 50%:")
+print(high_duty_stable[['I', 'D', 'f', 'i_p', 't_on']])
+print(f"\nTotal: {len(high_duty_stable)} stable points with duty cycle > 50%")
+
+# Calculate minimum concentration for stable points
+k_r = 1.2e6 # 1/s
+k_s = 1.5e6 # m^3/mol-s
+D_s = 1.1e-9 # m^2/s
+F = 96485 # C/mol
+A = 1e-6 # 1 mm^2 guess
+
+import numpy as np
+stable['C_min'] = np.sqrt(stable['t_on']*4/(np.pi*D_s))*(stable['i_p']*1e-3/(F*A)) + k_r/k_s # mol/m^3
+print(f"\nMinimum concentration for stable points:")
+print(stable[['D', 'f', 'i_p', 'C_min']])
