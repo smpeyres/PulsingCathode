@@ -16,6 +16,9 @@ duty_cycles = [0.5, 0.5, 0.5, 0.5, 0.5] # 50% duty cycle
 
 for i in range(len(frequencies)):
     t_on = duty_cycles[i] / frequencies[i] # seconds
-    k_r = (k_2**2*iPeaks[i]*iPeaks[i]/(A*A*F*F*D_e))**(1/3) # 1/s
+    k_r = (k_2*k_2*iPeaks[i]*iPeaks[i]/(A*A*F*F*D_e))**(1/3) # 1/s
     C_min = np.sqrt(t_on*4*D_s/np.pi)*iPeaks[i]/(F*A) + k_r/k_s # mol/m^3
     print(f"Frequency: {frequencies[i]} Hz, i_p: {iPeaks[i]*1e3:.2f} mA, Duty Cycle: {duty_cycles[i]*100:.0f}%, C_min: {C_min:.2e} mol/m^3")
+
+flux = 1 # mol/m^2-s
+k_r = (k_2*k_2*flux*flux/D_e)**(1/3) # 1/s
