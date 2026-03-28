@@ -20,5 +20,9 @@ for i in range(len(frequencies)):
     C_min = np.sqrt(t_on*4*D_s/np.pi)*iPeaks[i]/(F*A) + k_r/k_s # mol/m^3
     print(f"Frequency: {frequencies[i]} Hz, i_p: {iPeaks[i]*1e3:.2f} mA, Duty Cycle: {duty_cycles[i]*100:.0f}%, C_min: {C_min:.2e} mol/m^3")
 
+# Calculate concentration required if not pulsed
 flux = 1 # mol/m^2-s
 k_r = (k_2*k_2*flux*flux/D_e)**(1/3) # 1/s
+delta = 1e-6 # m, diffusion layer thickness
+C_min_DC = flux*delta/D_s # mol/m^3
+print(f"Minimum concentration for DC operation (10 mA, 0.1 mm^2, 1 um): {C_min_DC:.2e} mol/m^3")
