@@ -3,7 +3,7 @@ clear;
 
 %% Load image
 
-rgbImage = imread("Aqueous200mMNaClO4/7.2mA_90per_60Hz_30Mar2026.jpg");
+rgbImage = imread("Aqueous200mMNaClO4/3mA_25per_500Hz_30Mar2026.jpg");
 % Creates 3D matrix:
 % The first dimension represents the height (rows).
 % The second dimension represents the width (columns).
@@ -114,6 +114,9 @@ disp(centroidPixel);
 
 % get row associated with that pixel
 centroidRowLum = croppedImageGray(centroidPixel(2),:);
+
+% remove some background
+centroidRowLum = centroidRowLum - min(centroidRowLum);
 
 % develop x values for that row
 numPixelsCentroidRow = length(centroidRowLum);
