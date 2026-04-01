@@ -3,7 +3,7 @@ clear;
 
 %% Load image
 
-rgbImage = imread("Aqueous200mMNaClO4/3mA_25per_500Hz_30Mar2026.jpg");
+rgbImage = imread("Aqueous200mMNaClO4/7.2mA_90per_60Hz_30Mar2026.jpg");
 % Creates 3D matrix:
 % The first dimension represents the height (rows).
 % The second dimension represents the width (columns).
@@ -44,7 +44,7 @@ hold off;
 % Pause for user
 pause;
 
-%% Calculate the area of plasma-liquid interface
+%% Prepare image for Gaussian fit
 
 % Display image
 imshow(rgbImage);
@@ -111,3 +111,18 @@ hold off;
 % find nearest pixel to centroid
 centroidPixel = [round(centroidX),round(centroidY)];
 disp(centroidPixel);
+
+% get row associated with that pixel
+centroidRowLum = croppedImageGray(centroidPixel(2),:);
+
+% develop x values for that row
+numPixelsCentroidRow = length(centroidRowLum);
+centroidRowLength = mmPerPixel*linspace(-round(numPixelsCentroidRow/2), round(numPixelsCentroidRow/2), numPixelsCentroidRow);
+
+%% Perform the Gaussian fit
+
+% Use fit from Curve Fitting Toolbox, display automatically
+f = fit(centroidRowLength.', centroidRowLum.', 'gauss1')
+
+% plot the fit versus data
+plot(f,centroidRowLength, centroidRowLum)
