@@ -13,4 +13,21 @@ data = [3, 25, 500, 0.2906, 0.2927 - 0.2906;
         6, 50, 9e3, 0.2386, 0.2402 - 0.2386;
         6, 75, 1e3, 0.3328, 0.3351 - 0.3328;
         7.2, 90, 60, 0.3809, 0.3842 - 0.3809];
-disp(data)
+
+c1Values = data(:,4);
+sigmaValues = sqrt(c1Values./2);
+c1ErrorValues = data(:,5);
+sigmaErrorValues = sqrt(c1ErrorValues./2);
+data = [data sigmaValues sigmaErrorValues];
+
+oneSigmaArea = pi.*(sigmaValues).^2;
+twoSigmaArea = pi.*(2.*sigmaValues).^2;
+data = [data oneSigmaArea twoSigmaArea];
+
+% dA = 2*pi*sigma*dsigma
+oneSigmaAreaMargin = 2.*pi.*sigmaValues.*sigmaErrorValues;
+data = [data oneSigmaAreaMargin];
+
+meanArea = mean(oneSigmaArea, "all");
+stdDevMeanMeanArea = sqrt(sum((meanArea - oneSigmaArea).^2, "all")./(size(oneSigmaArea,1) - 1));
+nineFiveMarginMeanArea = 2*stdDevMeanMeanArea;
