@@ -1,2 +1,2 @@
 # PulsingCathode
-Pulsed plasma cathode reaction-diffusion codes
+Pulsed plasma cathode reaction-diffusion codes and analysis
