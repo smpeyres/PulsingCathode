@@ -1,42 +1,45 @@
-% script for calculating transient reaction-diffusion under selective
-% conditions, transient calculation, single pulse.
+% script for calculating transient reaction-diffusion under general
+% conditions, single pulse.
 clear all;
 
 % Dimensional governing equations:
-% E_t - D_e E_xx = - k E S
-% S_t - D_s S_xx = - k E S
+% E_t - D_e E_xx = - ks E S - kr E
+% S_t - D_s S_xx = - ks E S
 % BCs:
-% E_x (x=0) = -J/D_e 
+% E_x (x=0) = -J(t)/D_e 
 % E_x (x=delta) = 0
 % S_x (x=0) = 0
 % S (x=delta) = S_b
 % E (x, t= 0) = 0
 % S (x, t= 0) = S_b
 
-% Define dimensional parameters : water, 200 mM chloroacetate
-k = 1.5e6; % m3 mol-1 s-1
+% Define dimensional parameters : water, 20 mM chloroacetate
+k_s = 1.5e6; % m3 mol-1 s-1
+k_2 = 5.5e6; % m^3/mol-s
 D_e = 4.9e-9; % m2 s-1
 D_s = 1.1e-9; % m2 s-1
-S_b = 99; % mol m-3
-delta = 8.4e-7; % m
+S_b = 20; % mol m-3
+delta = 1e-6; % m
 
 % Pulse parameters
-f = 1e3;          % frequency [Hz] — pick based on your timescales
+f = 5e4;          % frequency [Hz] — pick based on your timescales
 T = 1/f;          % period [s]
-alpha = 0.5;      % duty cycle (t_on / T)
-J_peak = 1.3e-1;  % peak flux [mol m-2 s-1] — this replaces the old J
-
+alpha = 0.50;      % duty cycle (t_on / T)
+i_peak = 9.84; % mA
+area = 0.49; % mm^2
+faraday = 96845; % C/mol
+J_peak = i_peak*1e-3/(area*1e-6*faraday); % mol m^-2 s^-1
 
 % Calculate intrinsic length scales
-x_e = sqrt(D_e/(k*S_b)); % electron
-x_s = ((D_s*D_e)/(k*J_peak))^(1/3); % substrate
+x_e = sqrt(D_e/(k_s*S_b)); % electron
+x_s = ((D_s*D_e)/(k_s*J_peak))^(1/3); % substrate
 % Define minimum length scale
 xc_min = min([x_e,x_s]);
 
 % calculate timescales
 t_D = (delta^2)/D_s; % substrate diffusion across film
-t_e = (k*S_b)^(-1); % electron
-t_s = (D_e^2/(D_s*k^2*J_peak^2))^(1/3); % substrate
+t_e = (k_s*S_b)^(-1); % electron
+t_s = (D_e^2/(D_s*k_s^2*J_peak^2))^(1/3); % substrate
 % Calculate minimum time scale
 tc_min = min([t_D, t_e, t_s]);
 % Calculate maximum time scale
@@ -52,7 +55,7 @@ N_x = numPointsPerLength*numLengths;
 x = linspace(0,delta,N_x);
 
 % Uniform time mesh across a reasonable number of periods
-points_per_period = 200;
+points_per_period = 400;
 t = linspace(0, T, points_per_period);
 
 % Solve
@@ -63,11 +66,11 @@ m = 0; % Cartesian coordinates
 
 % code equation
 % here u(1) = E, u(2) = S
-function [c,f,s] = pdefun(x,t,u,dudx,D_e,D_s,k)
+function [c,f,s] = pdefun(x,t,u,dudx,D_e,D_s,k_s,k_2)
     c = [1; 1];
     f = [D_e; D_s] .* dudx;
-    F_e = - k * u(1) * u(2);
-    F_s = - k * u(1) * u(2);
+    F_e = - k_s * u(1) * u(2) - 2 * k_2 * u(1) * u(1);
+    F_s = - k_s * u(1) * u(2);
     s = [F_e; F_s];
 end
 
@@ -101,7 +104,7 @@ function J_t = pulsedFlux(t, J_peak, T, alpha)
 end
 
 % Function handles
-pde = @(x,t,u,dudx) pdefun(x,t,u,dudx,D_e,D_s,k);
+pde = @(x,t,u,dudx) pdefun(x,t,u,dudx,D_e,D_s,k_s,k_2);
 ic = @(x) pdeic(x,S_b);
 bc = @(xl,ul,xr,ur,t) bcfun(xl,ul,xr,ur,t,J_peak,T,alpha,S_b);
 
@@ -150,29 +153,11 @@ legend('Location', 'best');
 grid on;
 hold off;
 
+% Calculate single-pulse faradaic efficiency
+substrateRate = trapz(x, k_s.*sol(:,:,2).*sol(:,:,1), 2);
+substrateTotal = trapz(t, substrateRate);
 
+electronRate = trapz(x, 2*k_2.*sol(:,:,1).*sol(:,:,1) +  k_s.*sol(:,:,2).*sol(:,:,1), 2);
+electronTotal = trapz(t, electronRate);
 
-% 
-% % PLOT 2: Spatial profiles of substrate at different times
-% figure;
-% hold on;
-% % Select snapshot times 
-% seg_1_s = [0, 1.0, 2.0, 5.0] * t_e;
-% seg_2_s = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0] * t_s;
-% seg_3_s = [0.1, 0.2, 0.5, 1.0, 2.0, 5.0] * t_D;
-% snapshot_times_s = unique([seg_1_s, seg_2_s, seg_3_s]);
-% for i = 1:length(snapshot_times_s)
-% % Find closest time index
-%     [~, idx] = min(abs(t - snapshot_times_s(i)));
-% % Display as multiples of t_D
-%     t_norm_D = t(idx)/t_D;
-%     plot(x/1e-6, sol(idx,:,2), 'DisplayName', sprintf('t = %.2f t_D', t_norm_D), 'LineWidth',2);
-% end
-% 
-% xline(x_s/1e-6, 'LineWidth', 2, 'Color','k','LineStyle','--', 'DisplayName','x_s')
-% xlim([0,delta/1e-6]);
-% xlabel('x [um]');
-% ylabel('C_s [mM]');
-% legend('Location', 'best');
-% grid on;
-% hold off;
+FE = 1e2*substrateTotal/electronTotal;
