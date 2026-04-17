@@ -91,13 +91,19 @@ else
     kr = k1; % For ethylene glycol
 end
 
-%% Determine whether concentration is above kinetic threshold
+%% Determine whether concentration is above kinetic threshold, below transport threshold
 
 kineticThreshold = kr/ks;
-if initConc > kineticThreshold
-    disp('Concentration is above kinetic threshold. Proceeding with calculations...');
-else
+delta = 1e-6; % m, OOM guess
+transportThreshold = peakCurrent*delta/(interfacialArea*faradayConst*Ds);
+
+if and(initConc > kineticThreshold, initConc < transportThreshold)
+    disp('Concentration is above kinetic threshold and below transport threshold. Proceeding with calculations...');
+elseif initConc <= kineticThreshold
     disp('Concentration is at or below kinetic threshold. Ending calculation. Please adjust parameters.');
+    return;
+else
+    disp('Concenctration is at or above transport threshold. Ending calculation. Please adjust parameters.');
     return;
 end
 
