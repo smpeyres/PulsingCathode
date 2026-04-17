@@ -78,6 +78,14 @@ end
 % Just change name
 initConc = userInitConc; % mM = mol/m^3
 
+% Prompt user for film thickness
+promptDelta = 'Please enter your assumed film thickness (um): ';
+userDelta = str2double(strtrim(input(promptDelta,'s')));
+if isnan(userDelta)
+    error('Invalid numeric input for film thickness/delta.');
+end
+delta = 1e-6*userDelta; % um to m
+
 %% Calculate lumped recombination coefficient, kr (1/s)
 
 faradayConst = 96485; % C/mol
@@ -94,7 +102,6 @@ end
 %% Determine whether concentration is above kinetic threshold, below transport threshold
 
 kineticThreshold = kr/ks;
-delta = 1e-6; % m, OOM guess
 transportThreshold = peakCurrent*delta/(interfacialArea*faradayConst*Ds);
 
 if and(initConc > kineticThreshold, initConc < transportThreshold)
@@ -113,21 +120,46 @@ onTime = dutyCycle/frequency;
 
 thresholdTime = 0.25*pi*(faradayConst^2)*(interfacialArea^2)*Ds*(peakCurrent^(-2))*((initConc - kineticThreshold)^2);
 
-timeRatio = onTime/thresholdTime;
+timeRatio = thresholdTime/onTime;
 
 %% Calculate regimes
-if and(timeRatio < 1, dutyCycle < 0.5)
+if and(timeRatio > 1, dutyCycle < 0.5)
     disp('System is in under-react, over-recover regime. Excellent!');
-elseif and(timeRatio < 1, dutyCycle == 0.5)
+elseif and(timeRatio > 1, dutyCycle == 0.5)
     disp('System is in under-react, adequate recovery regime. Nice!');
 elseif and(timeRatio == 1.0, dutyCycle < 0.5)
     disp('System is in adequate reaction, over-recover regime. Nice!');
 elseif and(timeRatio < 1, dutyCycle > 0.5)
     disp('System is in under-react, under-recover regime. Not bad, consider adjusting parameters.')
-elseif and(timeRatio > 1, dutyCycle < 0.5)
+elseif and(timeRatio < 1, dutyCycle < 0.5)
     disp('System is in over-react, over-recover regime. Not bad, consider adjusting parameters.')
-elseif and(timeRatio >= 1, dutyCycle >= 0.5)
+elseif and(timeRatio <= 1, dutyCycle >= 0.5)
     disp('System is in over-react, under-recover regime. Not good, please adjust parameters.')
 else
     disp('Regime not identified.')
+end
+
+%% Calculate the DC instantaneous Faradaic Efficiency
+
+% prompt user if this calculation should be done
+promptDCFESolve = 'Would you like to calculate the instantaneous FE for the analogous DC condition? (Y/N): ';
+userDCFEYN = strtrim(input(promptDCFESolve,'s'));
+if any(strcmp(userDCFEYN,{'yes','Y','Yes','y'}))
+    % Calculate FE using interpolation from scaling law paper
+    Ha = kr*(delta^2)/De;
+    flux = peakCurrent/(interfacialArea*faradayConst);
+    Da = ks*flux*(delta^3)/(Ds*De);
+    Omega = ks*initConc/kr;
+    if Da/Ha < 1
+        alpha = 1;
+    else
+        alpha = 1 + log10(Da/Ha);
+    end
+    eta = (((1/Omega)*(1 + (Da/Ha)))^alpha + 1)^(-1/alpha);
+    DCFE = 1e2*eta;
+    disp(['Calculated instantaneous FE for DC at same peak current (1 um film thickness): ', num2str(DCFE), ' %']);
+elseif any(strcmp(userDCFEYN,{'no','N','No','n'}))
+    disp('Calculation of instantaneous FE for DC not requested,')
+else
+    error('Invalid Y/N selection.')
 end
