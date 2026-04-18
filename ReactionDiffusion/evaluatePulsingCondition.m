@@ -46,7 +46,7 @@ peakCurrent = 1e-3*userPeakCurrent; % mA to A
 promptArea = 'Please enter the plasma-liquid interfacial area (mm^2): ';
 userInterfacialArea = str2double(strtrim(input(promptArea,'s')));
 if not(userInterfacialArea > 0)
-    error('Invalid numeric input for peak current.');
+    error('Invalid numeric input for interfacial area.');
 end
 % Convert to standard units
 interfacialArea = 1e-6*userInterfacialArea; % mm^2 to m^2
@@ -114,27 +114,27 @@ else
     return;
 end
 
-%% Calculate pulse times
+%% Regime identification
 
+% Calculate time ratio
 onTime = dutyCycle/frequency;
 
 thresholdTime = 0.25*pi*(faradayConst^2)*(interfacialArea^2)*Ds*(peakCurrent^(-2))*((initConc - kineticThreshold)^2);
 
 timeRatio = thresholdTime/onTime;
 
-%% Calculate regimes
-if and(timeRatio > 1, dutyCycle < 0.5)
-    disp('System is in under-react, over-recover regime. Excellent!');
-elseif and(timeRatio > 1, dutyCycle == 0.5)
-    disp('System is in under-react, adequate recovery regime. Nice!');
-elseif and(timeRatio <= 1, dutyCycle > 0.5)
-    disp('System is in under-react, under-recover regime. Not bad, consider adjusting parameters.')
-elseif and(timeRatio < 1, dutyCycle < 0.5)
-    disp('System is in over-react, over-recover regime. Not bad, consider adjusting parameters.')
-elseif and(timeRatio <= 1, dutyCycle >= 0.5)
-    disp('System is in over-react, under-recover regime. Not good, please adjust parameters.')
+% Classification logic
+underReact = timeRatio >= 1;
+overRecover = dutyCycle <= 0.5;
+
+if underReact && overRecover
+    disp('Under-react, over-recover. Excellent!');
+elseif underReact && ~overRecover
+    disp('Under-react, under-recover. Consider adjusting parameters.');
+elseif ~underReact && overRecover
+    disp('Over-react, over-recover. Consider adjusting parameters.');
 else
-    disp('Regime not identified.')
+    disp('Over-react, under-recover. Please adjust parameters.');
 end
 
 %% Calculate the DC instantaneous Faradaic Efficiency
@@ -160,7 +160,7 @@ if any(strcmp(userDCFEYN,{'yes','Y','Yes','y'}))
     % Instantaneous radical selectivity - analogous to FEDC in this case
     eta = (((1/Omega)*(1 + (Da/Ha)))^alpha + 1)^(-1/alpha);
     DCFE = 1e2*eta;
-    disp(['Calculated instantaneous FE for DC at same peak current (1 um film thickness): ', num2str(DCFE), ' %']);
+    disp(['Calculated instantaneous FE for DC at same peak current: ', num2str(DCFE), ' %']);
 elseif any(strcmp(userDCFEYN,{'no','N','No','n'}))
     disp('Calculation of instantaneous FE for DC not requested,')
 else
