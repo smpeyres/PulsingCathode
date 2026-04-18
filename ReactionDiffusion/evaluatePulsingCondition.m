@@ -7,7 +7,7 @@ promptSolvent = 'Select solvent ("water"/"aqueous" or "ethylene glycol"): ';
 userSolvent = strtrim(lower(input(promptSolvent,'s')));
 
 % Identify solvent from user input, define intrinsic parameters
-if any(strcmp(userSolvent,{'water','aqueous'}))
+if any(strcmp(userSolvent,{'w','water','aqueous'}))
     solventCode = 1;
     % pseudo-second order: 2e- + 2H2O -> 2OH- + H2
     k2 = 5.5e6; % m^3/mol-s
@@ -36,7 +36,7 @@ end
 % Prompt user for peak current (mA) and store as floating-point number
 promptCurrent = 'Please enter the peak current (mA): ';
 userPeakCurrent = str2double(strtrim(input(promptCurrent,'s')));
-if isnan(userPeakCurrent)
+if not(userPeakCurrent > 0)
     error('Invalid numeric input for peak current.');
 end
 % Convert to standard units
@@ -45,8 +45,8 @@ peakCurrent = 1e-3*userPeakCurrent; % mA to A
 % Prompt user for plasma-liquid interfacial area (mm^2)
 promptArea = 'Please enter the plasma-liquid interfacial area (mm^2): ';
 userInterfacialArea = str2double(strtrim(input(promptArea,'s')));
-if isnan(userInterfacialArea)
-    error('Invalid numeric input for interfacial area.');
+if not(userInterfacialArea > 0)
+    error('Invalid numeric input for peak current.');
 end
 % Convert to standard units
 interfacialArea = 1e-6*userInterfacialArea; % mm^2 to m^2
@@ -54,7 +54,7 @@ interfacialArea = 1e-6*userInterfacialArea; % mm^2 to m^2
 % Prompt user for duty cycle (%):
 promptDuty = 'Please enter the duty cycle (%): ';
 userDutyCycle = str2double(strtrim(input(promptDuty,'s')));
-if isnan(userDutyCycle)
+if not(and(userDutyCycle > 0, userDutyCycle < 100))
     error('Invalid numeric input for duty cycle.');
 end
 % Convert to standard units
@@ -63,7 +63,7 @@ dutyCycle = 1e-2*userDutyCycle; % percent to fraction
 % Prompt user for frequency (Hz):
 promptFreq = 'Please enter the frequency (Hz): ';
 userFrequency = str2double(strtrim(input(promptFreq,'s')));
-if isnan(userFrequency)
+if not(userFrequency > 0)
     error('Invalid numeric input for frequency.');
 end
 % No need to change units, just change name
@@ -72,8 +72,8 @@ frequency = userFrequency; % Hz = 1/s
 % Prompt user for chloroacetate concentration (mM):
 promptConc = 'Please enter the initial chloroacetate (ClCH2CO2-) concentration: ';
 userInitConc = str2double(strtrim(input(promptConc,'s')));
-if isnan(userInitConc)
-    error('Invalid numeric input for initial concentration.');
+if not(userInitConc > 0)
+    error('Invalid numeric input for concentration.');
 end
 % Just change name
 initConc = userInitConc; % mM = mol/m^3
@@ -81,8 +81,8 @@ initConc = userInitConc; % mM = mol/m^3
 % Prompt user for film thickness
 promptDelta = 'Please enter your assumed film thickness (um): ';
 userDelta = str2double(strtrim(input(promptDelta,'s')));
-if isnan(userDelta)
-    error('Invalid numeric input for film thickness/delta.');
+if not(userDelta > 0)
+    error('Invalid numeric input for film thickness.');
 end
 delta = 1e-6*userDelta; % um to m
 
@@ -127,9 +127,7 @@ if and(timeRatio > 1, dutyCycle < 0.5)
     disp('System is in under-react, over-recover regime. Excellent!');
 elseif and(timeRatio > 1, dutyCycle == 0.5)
     disp('System is in under-react, adequate recovery regime. Nice!');
-elseif and(timeRatio == 1.0, dutyCycle < 0.5)
-    disp('System is in adequate reaction, over-recover regime. Nice!');
-elseif and(timeRatio < 1, dutyCycle > 0.5)
+elseif and(timeRatio <= 1, dutyCycle > 0.5)
     disp('System is in under-react, under-recover regime. Not bad, consider adjusting parameters.')
 elseif and(timeRatio < 1, dutyCycle < 0.5)
     disp('System is in over-react, over-recover regime. Not bad, consider adjusting parameters.')
@@ -146,15 +144,20 @@ promptDCFESolve = 'Would you like to calculate the instantaneous FE for the anal
 userDCFEYN = strtrim(input(promptDCFESolve,'s'));
 if any(strcmp(userDCFEYN,{'yes','Y','Yes','y'}))
     % Calculate FE using interpolation from scaling law paper
+    % Hatta number for electron recombination-diffusion
     Ha = kr*(delta^2)/De;
+    % Calculate peak flux
     flux = peakCurrent/(interfacialArea*faradayConst);
+    % Damkohler number for substrate reaction-diffusion
     Da = ks*flux*(delta^3)/(Ds*De);
+    % Kinetic competition factor - ratio of psuedo-first order rate consts.
     Omega = ks*initConc/kr;
     if Da/Ha < 1
         alpha = 1;
     else
         alpha = 1 + log10(Da/Ha);
     end
+    % Instantaneous radical selectivity - analogous to FEDC in this case
     eta = (((1/Omega)*(1 + (Da/Ha)))^alpha + 1)^(-1/alpha);
     DCFE = 1e2*eta;
     disp(['Calculated instantaneous FE for DC at same peak current (1 um film thickness): ', num2str(DCFE), ' %']);
