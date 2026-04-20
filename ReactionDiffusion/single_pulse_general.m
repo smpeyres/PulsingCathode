@@ -21,24 +21,26 @@ k_s = 1.5e6;      % m3 mol-1 s-1
 k_2 = 5.5e6;      % m^3/mol-s
 D_e = 4.9e-9;     % m2 s-1
 D_s = 1.1e-9;     % m2 s-1
-S_b = 20;         % mol m-3
-delta = 1e-6;     % m
+S_b = 150;         % mol m-3
+delta = 1.5e-6;     % m
 
 % Pulse parameters
-% f = 5e4;          % frequency [Hz]
-f = 5e3; 
+f = 5e4;          % frequency [Hz]
+%f = 5e3; 
 T = 1/f;          % period [s]
 alpha = 0.50;     % duty cycle (t_on / T)
-% i_peak = 9.84;    % mA
-i_peak = 12.62;
+%i_peak = 9.84;    % mA
+%i_peak = 12.62;
+i_peak = 9.78;
+%i_peak = 12.69;
 area = 0.49;      % mm^2
 faraday = 96485;  % C/mol
 J_peak = i_peak*1e-3/(area*1e-6*faraday); % mol m^-2 s^-1
 
 % Picard convergence controls
 tol       = 1e-4;  % relative change in period-end state to declare PSS
-max_iter  = 100;   % safety cap on Picard iterations
-points_per_period = 200;
+max_iter  = 200;   % safety cap on Picard iterations
+points_per_period = 400;
 
 % Calculate intrinsic length scales
 x_e = sqrt(D_e/(k_s*S_b));               % electron
@@ -52,7 +54,7 @@ t_s = (D_e^2/(D_s*k_s^2*J_peak^2))^(1/3);
 
 % Spatial mesh
 numLengths = ceil(delta/xc_min);
-numPointsPerLength = 20;
+numPointsPerLength = 30;
 N_x = numPointsPerLength*numLengths;
 x = linspace(0, delta, N_x);
 
@@ -62,7 +64,7 @@ t = linspace(0, T, points_per_period);
 % Solver options
 m = 0;
 t_on = alpha * T;
-options = odeset('MaxStep', t_on/10);
+options = odeset('MaxStep', t_on/20);
 
 % Function handles (independent of IC)
 pde = @(xq,tq,u,dudx) pdefun(xq,tq,u,dudx,D_e,D_s,k_s,k_2);
