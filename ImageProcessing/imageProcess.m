@@ -102,11 +102,13 @@ centroidY = sum(sum(croppedImageGray, 2)' .* y) / totalMass;
 
 % Show position of centroid
 imshow(croppedImageGray);
-title(['Centroid coordinates: (', num2str(centroidX), ', ', num2str(centroidY), ')']);
+
 hold on;
 sz = 100;
 scatter(centroidX, centroidY, sz, "filled", "red"); % Plot the point
 hold off;
+title(['Centroid coordinates: (', num2str(centroidX), ', ', num2str(centroidY), '). Press any key to continue.']);
+pause;
 
 % find nearest pixel to centroid
 centroidPixel = [round(centroidX),round(centroidY)];
