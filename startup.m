@@ -7,5 +7,6 @@ projectRoot = fileparts(mfilename('fullpath'));
 addpath(genpath(fullfile(projectRoot, 'ImageProcessing')));
 addpath(genpath(fullfile(projectRoot, 'ReactionDiffusion')));
 addpath(genpath(fullfile(projectRoot, 'StabilityAnalysis')));
+addpath(genpath(fullfile(projectRoot, 'Electrical')));
 
 fprintf('Project initialized. Ready to work!\n');
