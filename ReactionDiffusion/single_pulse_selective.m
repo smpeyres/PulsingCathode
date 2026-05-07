@@ -17,8 +17,8 @@ clear all;
 k = 1.5e6; % m3 mol-1 s-1
 D_e = 4.9e-9; % m2 s-1
 D_s = 1.1e-9; % m2 s-1
-S_b = 99; % mol m-3
-delta = 8.4e-7; % m
+S_b = 20; % mol m-3
+delta = 1e-7; % m
 
 % Pulse parameters
 f = 1e3;          % frequency [Hz] — pick based on your timescales
@@ -26,34 +26,31 @@ T = 1/f;          % period [s]
 alpha = 0.5;      % duty cycle (t_on / T)
 J_peak = 1.3e-1;  % peak flux [mol m-2 s-1] — this replaces the old J
 
-
-% Calculate intrinsic length scales
-x_e = sqrt(D_e/(k*S_b)); % electron
-x_s = ((D_s*D_e)/(k*J_peak))^(1/3); % substrate
-% Define minimum length scale
-xc_min = min([x_e,x_s]);
-
-% calculate timescales
-t_D = (delta^2)/D_s; % substrate diffusion across film
+% All of the timescales
 t_e = (k*S_b)^(-1); % electron
 t_s = (D_e^2/(D_s*k^2*J_peak^2))^(1/3); % substrate
-% Calculate minimum time scale
-tc_min = min([t_D, t_e, t_s]);
-% Calculate maximum time scale
-tc_max = max([t_D, t_e, t_s]);
+t_D = (delta^2)/D_s; % substrate diffusion across film
+t_on = alpha*T;
+t_off = T - t_on;
 
-% # of minimum lengthscales in domain
-numLengths = ceil(delta/xc_min);
-% desired number of mesh points per minimum lengthscale
-numPointsPerLength = 20;
-% Calculate total # mesh points
-N_x = numPointsPerLength*numLengths;
-% Create uniform mesh
-x = linspace(0,delta,N_x);
+% Define the minimum time scale
+t_min = min([t_e, t_s, t_D, t_on, t_off]);
 
-% Uniform time mesh across a reasonable number of periods
-points_per_period = 200;
-t = linspace(0, T, points_per_period);
+% Define maximum time step
+dt_max = t_min/100;
+
+% Define longest time:
+t_max = max([t_e, t_s, t_D, t_on, t_off, T]);
+
+t = linspace(0, t_max, ceil(t_max/t_min));
+
+% Use Fouirer number of diffusion / model diffusion coefficient
+D_M = 0.45;
+dx_e = (D_e*dt_max/D_M)^0.5;
+dx_s = (D_s*dt_max/D_M)^0.5;
+dx_min = min([dx_e,dx_s]);
+
+x = linspace(0, delta, ceil(delta/dx_min));
 
 % Solve
 m = 0; % Cartesian coordinates
@@ -108,7 +105,7 @@ bc = @(xl,ul,xr,ur,t) bcfun(xl,ul,xr,ur,t,J_peak,T,alpha,S_b);
 % Solve equation
 % Tight MaxStep
 t_on = alpha * T;
-options = odeset('MaxStep', t_on/10);
+options = odeset('MaxStep', dt_max);
 sol = pdepe(m, pde, ic, bc, x, t, options);
 
 % opts = odeset('MaxStep', T/10, 'RelTol', 1e-5, 'AbsTol', 1e-8);
@@ -125,7 +122,7 @@ if time_indices(end) ~= size(sol,1)
     time_indices = [time_indices, size(sol,1)];
 end
 plot(x/1e-9, sol(time_indices,:,1));
-xlim([0,x_s/1e-9]);
+xlim([0,dx_e*100/1e-9]);
 xlabel('x [nm]');
 ylabel('C_e [mM]');
 legend('Location', 'best');
