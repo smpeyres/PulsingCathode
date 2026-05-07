@@ -44,9 +44,18 @@ for k = 1:numFiles
     end
     
     % ----- Set current (mA) -----
-    current_match = regexp(filename, '(\d+\.?\d*)\s*mA', 'tokens', 'ignorecase');
+    current_match = regexp(filename, '(\d+)_(\d+)\s*mA', 'tokens', 'ignorecase');
     if ~isempty(current_match)
-        set_current = str2double(current_match{1}{1});
+        % Decimal form: e.g., 2_5mA → 2.5
+        whole_part = current_match{1}{1};
+        frac_part  = current_match{1}{2};
+        set_current = str2double([whole_part '.' frac_part]);
+    else
+        % Integer form: e.g., 3mA → 3.0
+        current_match2 = regexp(filename, '(\d+)\s*mA', 'tokens', 'ignorecase');
+        if ~isempty(current_match2)
+            set_current = str2double(current_match2{1}{1});
+        end
     end
 
     % ---------- 2. Read data ----------
