@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 % ====================== PATH ======================
-P = '.\Electrical\05_18';
+P = '.\Electrical\05_13';
 S = dir(fullfile(P, '*.csv'));
 numFiles = numel(S);
 
@@ -156,3 +156,4 @@ save(fullfile(P, 'Pulsing_Analysis_Results.mat'), 'Results', 'FileNames', 'T');
 fprintf('\nDone. Results saved to Pulsing_Analysis_Results.xlsx and .mat\n');
 
 mean(AvgWhole)
+mean(AvgPeak)
