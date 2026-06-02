@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 % ====================== PATH ======================
-P = '.\Electrical\5s_rep2';
+P = '.\Electrical\8s';
 S = dir(fullfile(P, '*.csv'));
 numFiles = numel(S);
 
