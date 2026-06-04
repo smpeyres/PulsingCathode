@@ -1,7 +1,7 @@
 clear all; close all; clc;
 
 % ====================== PATH ======================
-P = '.\Electrical\8s';
+P = '.\Electrical\10s';
 S = dir(fullfile(P, '*.csv'));
 numFiles = numel(S);
 
@@ -158,4 +158,7 @@ fprintf('\nDone. Results saved to Pulsing_Analysis_Results.xlsx and .mat\n');
 mean(AvgWhole)
 mean(AvgPeak)
 
-% plot(data(:,1),Current);
+plot((data(:,1) - data(1,1))/1e-3,Current);
+hold on;
+xlabel("Time (ms)");
+ylabel("Discharge Current (mA)")
