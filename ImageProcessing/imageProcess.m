@@ -3,7 +3,7 @@ clear;
 
 %% Load image
 
-rgbImage = imread("Aqueous200mMNaClO4/3mA_25per_500Hz_30Mar2026.jpg");
+rgbImage = imread("09Sep2026/1kHz_5%_1.3mA.jpg");
 % Creates 3D matrix:
 % The first dimension represents the height (rows).
 % The second dimension represents the width (columns).
@@ -28,11 +28,11 @@ if leftEdge(1) > rightEdge(1)
     leftEdge = rightEdge;
     rightEdge = temp;
 end
-pixelDistance = abs(rightEdge(1) - leftEdge(1));
+pixelDiameter = abs(rightEdge(1) - leftEdge(1));
 
 % Calculate conversion factor from known tube diameter
 tubeDiameter = 6.35; % mm
-mmPerPixel = tubeDiameter / pixelDistance; % mm/pixel
+mmPerPixel = tubeDiameter / pixelDiameter; % mm/pixel
 disp(['Conversion factor: ', num2str(mmPerPixel), ' mm/pixel. Press any key to continue.']);
 
 % Visualization selection for validation
@@ -44,10 +44,42 @@ hold off;
 % Pause for user
 pause;
 
+%% Calculate height of discharge
+% Show image to user
+imshow(rgbImage);
+title('Select the top and bottom of discharge');
+
+% Prompt user to select points on discharge
+title('Select the top of discharge');
+topPoint = ginput(1); % Returns [x, y] coordinates
+title('Select the bottom of discharge');
+bottomPoint = ginput(1);
+
+% Calculate number of vertical pixels between points
+if topPoint(2) > bottomPoint(2)
+    % Swap points if selected in reverse order
+    temp = topPoint;
+    topPoint = bottomPoint;
+    bottomPoint = temp;
+end
+pixelHeight = abs(bottomPoint(2) - topPoint(2));
+dischargeHeight = pixelHeight * mmPerPixel;
+disp(['Discharge height ', num2str(dischargeHeight), ' mm. Press any key to continue.']);
+
+% Visualization selection for validation
+title(['Discharge height ', num2str(dischargeHeight), ' mm. Press any key to continue.']);
+hold on;
+plot([topPoint(1), bottomPoint(1)], [topPoint(2), bottomPoint(2)], 'r-', 'LineWidth', 2);
+hold off;
+
+% Pause for user
+pause;
+
+
 %% Prepare image for Gaussian fit
 
 % Display image
-imshow(rgbImage);
+imshow(rgbImage,[]);
 title('Select ROI around the plasma-liquid spot. Make it tight!');
 
 % Select appropriate region of interest
@@ -70,27 +102,8 @@ pause;
 
 % Grayscale the cropped image and display
 croppedImageGray = rgb2gray(croppedImage);
-imshow(croppedImageGray);
+imshow(croppedImageGray,[]);
 title('Cropped ROI in Grayscale.')
-
-% % Find the maximum value and its linear index
-% [maxValue, linearIndex] = max(croppedImageGray(:));
-% 
-% % Convert the linear index to row and column indices
-% [row, col] = ind2sub(size(croppedImageGray), linearIndex);
-% 
-% % Display the results
-% disp(['Maximum value: ', num2str(maxValue)]);
-% disp(['Row index: ', num2str(row)]);
-% disp(['Column index: ', num2str(col)]);
-% 
-% % Display the result
-% title('Detected position of maximum luminosity. Press any key to continue.');
-% hold on;
-% sz = 100;
-% scatter(col, row, sz, "filled", "red"); % Plot the point
-% hold off;
-% pause
 
 % Compute centroid
 [rows, cols] = size(croppedImageGray);
@@ -131,3 +144,17 @@ f = fit(centroidRowLength.', centroidRowLum.', 'gauss1')
 
 % plot the fit versus data
 plot(f,centroidRowLength, centroidRowLum)
+
+% Standard deviation = c_1/sqrt(2)
+% Extract coefficients from the Gaussian fit
+coeffs = coeffvalues(f);
+stdDev = coeffs(3) / sqrt(2); % Standard deviation from the fit
+
+% Extract confidence intervals for the standard deviation
+confInt = confint(f);
+stdDevCI = confInt(1, 3) / sqrt(2); % Lower bound
+stdDevCI_upper = confInt(2, 3) / sqrt(2); % Upper bound
+
+dSigma = stdDevCI_upper - stdDev;
+area = pi*stdDev^2;
+dArea = 2*pi*stdDev*dSigma;
