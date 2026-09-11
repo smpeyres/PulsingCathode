@@ -39,6 +39,7 @@ disp(['Conversion factor: ', num2str(mmPerPixel), ' mm/pixel. Press any key to c
 title(['Conversion factor: ', num2str(mmPerPixel), ' mm/pixel. Press any key to continue.']);
 hold on;
 plot([leftEdge(1), rightEdge(1)], [leftEdge(2), rightEdge(2)], 'r-', 'LineWidth', 2);
+plot([leftEdge(1), rightEdge(1)], [leftEdge(2), leftEdge(2)], 'r--', 'LineWidth', 2);
 hold off;
 
 % Pause for user
@@ -70,6 +71,7 @@ disp(['Discharge height ', num2str(dischargeHeight), ' mm. Press any key to cont
 title(['Discharge height ', num2str(dischargeHeight), ' mm. Press any key to continue.']);
 hold on;
 plot([topPoint(1), bottomPoint(1)], [topPoint(2), bottomPoint(2)], 'r-', 'LineWidth', 2);
+plot([topPoint(1), topPoint(1)], [topPoint(2), bottomPoint(2)], 'r--', 'LineWidth', 2);
 hold off;
 
 % Pause for user
@@ -80,11 +82,11 @@ pause;
 
 % Display image
 imshow(rgbImage,[]);
-title('Select ROI around the plasma-liquid spot. Make it tight!');
+title('Select ROI around the plasma-liquid spot. Make it wide and thin!');
 
 % Select appropriate region of interest
 % Tip: only get lower part of discharge to avoid glow along needle tip
-% and to get entirety of plasma spot
+% Get entirety of plasma spot with very wide window
 % Let the user draw a rectangle
 roi = drawrectangle;
 % Wait for the user to finish positioning the rectangle
@@ -102,19 +104,20 @@ pause;
 
 % Grayscale the cropped image and display
 croppedImageGray = rgb2gray(croppedImage);
-imshow(croppedImageGray,[]);
-title('Cropped ROI in Grayscale.')
+rescaledCroppedImageGray = rescale(croppedImageGray);
+imshow(rescaledCroppedImageGray);
+title('Cropped ROI in rescaled grayscale.')
 
 % Compute centroid
-[rows, cols] = size(croppedImageGray);
-totalMass = sum(croppedImageGray(:));
+[rows, cols] = size(rescaledCroppedImageGray);
+totalMass = sum(rescaledCroppedImageGray(:));
 x = 1:cols;
 y = 1:rows;
-centroidX = sum(sum(croppedImageGray) .* x) / totalMass;
-centroidY = sum(sum(croppedImageGray, 2)' .* y) / totalMass;
+centroidX = sum(sum(rescaledCroppedImageGray) .* x) / totalMass;
+centroidY = sum(sum(rescaledCroppedImageGray, 2)' .* y) / totalMass;
 
 % Show position of centroid
-imshow(croppedImageGray);
+imshow(rescaledCroppedImageGray);
 
 hold on;
 sz = 100;
@@ -128,33 +131,39 @@ centroidPixel = [round(centroidX),round(centroidY)];
 disp(centroidPixel);
 
 % get row associated with that pixel
-centroidRowLum = croppedImageGray(centroidPixel(2),:);
-
-% remove some background
-centroidRowLum = centroidRowLum - min(centroidRowLum);
+centroidRowLum = rescaledCroppedImageGray(centroidPixel(2),:);
 
 % develop x values for that row
 numPixelsCentroidRow = length(centroidRowLum);
 centroidRowLength = mmPerPixel*linspace(-round(numPixelsCentroidRow/2), round(numPixelsCentroidRow/2), numPixelsCentroidRow);
 
-%% Perform the Gaussian fit
+%% Fit Gaussian with cubic background
 
-% Use fit from Curve Fitting Toolbox, display automatically
-f = fit(centroidRowLength.', centroidRowLum.', 'gauss1')
+% Initial Gaussian fit from Curve Fitting Toolbox, display automatically
+fInit = fit(centroidRowLength.', centroidRowLum.', 'gauss1');
+coeffsInit = coeffvalues(fInit);
+
+% create Gaussian + poly5 model:
+g = fittype("a1 + b1*x + c1*x^2 + d1*x^3 + e1*x^4 + a2*exp(-((x-b2)/c2)^2)", ...
+    dependent="y", independent="x", ...
+    coefficients = ["a1" "b1" "c1" "d1" "e1" "a2" "b2" "c2"]);
+
+f = fit(centroidRowLength.', centroidRowLum.', g, 'StartPoint', horzcat([0,0,0,0,0],coeffsInit));
 
 % plot the fit versus data
 plot(f,centroidRowLength, centroidRowLum)
 
+%% Calculate area and area uncertainty
+
 % Standard deviation = c_1/sqrt(2)
 % Extract coefficients from the Gaussian fit
 coeffs = coeffvalues(f);
-stdDev = coeffs(3) / sqrt(2); % Standard deviation from the fit
-
-% Extract confidence intervals for the standard deviation
+stdDev = coeffs(8) / sqrt(2);
 confInt = confint(f);
-stdDevCI = confInt(1, 3) / sqrt(2); % Lower bound
-stdDevCI_upper = confInt(2, 3) / sqrt(2); % Upper bound
+
+stdDevCI_upper = confInt(2, 8) / sqrt(2); % Upper bound
 
 dSigma = stdDevCI_upper - stdDev;
-area = pi*stdDev^2;
-dArea = 2*pi*stdDev*dSigma;
+
+area = pi*stdDev^2
+dArea = 2*pi*stdDev*dSigma
