@@ -1,19 +1,19 @@
 clear all; close all; clc;
 
 % ====================== PATH ======================
-P = '.\Electrical\10s';
-S = dir(fullfile(P, '*.csv'));
-numFiles = numel(S);
+P = '.\09Sep2026';
+direct = dir('.\09Sep2026\*.csv');
+numFiles = numel(direct);
 
 fprintf('Processing %d CSV files...\n\n', numFiles);
 
 % ====================== PREALLOCATE ======================
-Results = NaN(numFiles, 5);      % [Freq_Hz, Duty_%, Set_mA, Avg_Whole_mA, Avg_ON_mA]
+Results = NaN(numFiles, 6);      % [Freq_Hz, Duty_%, Set_mA, Avg_Whole_mA, Avg_ON_mA, dPeak]
 FileNames = strings(numFiles, 1);
 
 % ====================== MAIN LOOP ======================
 for k = 1:numFiles
-    filename = S(k).name;
+    filename = direct(k).name;
     filepath = fullfile(P, filename);
     FileNames(k) = filename;
     
@@ -93,6 +93,8 @@ for k = 1:numFiles
         % Step 3: final value
         if numel(clean_values) >= 8
             Avg_Peak = mean(clean_values);
+            stdDev = std(clean_values);
+            dPeak = 2*stdDev;
         else
             Avg_Peak = mean_on;
             disp("Improve x-axis resolution - capture fewer pulses.")
@@ -102,7 +104,7 @@ for k = 1:numFiles
     end
 
     % ---------- 4. Store ----------
-    Results(k,:) = [freq, duty, set_current, Avg_Whole, Avg_Peak];
+    Results(k,:) = [freq, duty, set_current, Avg_Whole, Avg_Peak, dPeak];
 end
 
 % ====================== DERIVED METRICS ======================
@@ -111,6 +113,7 @@ Duty = Results(:,2);
 Set_mA = Results(:,3);
 AvgWhole = Results(:,4);
 AvgPeak = Results(:,5);
+dPeak = Results(:,6);
 
 % Theoretical peak current
 TheoPeak = NaN(numFiles,1);
@@ -118,9 +121,9 @@ valid_idx = Duty > 0;
 TheoPeak(valid_idx) = Set_mA(valid_idx) ./ (Duty(valid_idx)/100);
 
 % ====================== BUILD TABLE ======================
-T = table(FileNames, Freq_Hz, Duty, Set_mA, AvgWhole, AvgPeak, TheoPeak, ...
+T = table(FileNames, Freq_Hz, Duty, Set_mA, AvgWhole, AvgPeak, dPeak, TheoPeak, ...
     'VariableNames', {'Filename','Frequency_Hz','Duty_Percent','Set_Current_mA', ...
-                      'Avg_Whole_mA','Avg_ON_mA','Theoretical_Peak_mA'});
+                      'Avg_Whole_mA','Avg_ON_mA', 'dPeak', 'Theoretical_Peak_mA'});
 
 T = sortrows(T, {'Set_Current_mA','Frequency_Hz','Duty_Percent'});
 
@@ -130,22 +133,24 @@ T.Duty_Percent        = round(T.Duty_Percent);
 T.Set_Current_mA      = round(T.Set_Current_mA, 2);
 T.Avg_Whole_mA        = round(T.Avg_Whole_mA, 4);
 T.Avg_ON_mA           = round(T.Avg_ON_mA, 4);
+T.dPeak               = round(T.dPeak, 4);
 T.Theoretical_Peak_mA = round(T.Theoretical_Peak_mA, 4);
 
 % ====================== PRINT ======================
 fprintf('\n=== Pulsing Analysis Results ===\n\n');
-fprintf('%-30s %8s %8s %10s %15s %15s %15s\n', ...
-    'Filename','Freq(Hz)','Duty(%)','Set_mA','Avg_Whole','Avg_ON','Theo_Peak');
+fprintf('%-30s %8s %8s %10s %15s %15s %15s  %15s\n', ...
+    'Filename','Freq(Hz)','Duty(%)','Set_mA','Avg_Whole','Avg_ON','dPeak','Theo_Peak');
 fprintf('%s\n', repmat('-',1,115));
 
 for i = 1:height(T)
-    fprintf('%-30s %8.0f %8.0f %10.1f %15.1f %15.1f %15.1f\n', ...
+    fprintf('%-30s %8.0f %8.0f %10.1f %15.1f %15.1f %15.1f %15.1f\n', ...
         T.Filename(i), ...
         T.Frequency_Hz(i), ...
         T.Duty_Percent(i), ...
         T.Set_Current_mA(i), ...
         T.Avg_Whole_mA(i), ...
         T.Avg_ON_mA(i), ...
+        T.dPeak(i), ...
         T.Theoretical_Peak_mA(i));
 end
 
