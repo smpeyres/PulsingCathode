@@ -1,8 +1,8 @@
 clear all; close all; clc;
 
 % ====================== PATH ======================
-P = '.\09Sep2026';
-direct = dir('.\09Sep2026\*.csv');
+P = '.\15Sep2026';
+direct = dir('.\15Sep2026\*.csv');
 numFiles = numel(direct);
 
 fprintf('Processing %d CSV files...\n\n', numFiles);
