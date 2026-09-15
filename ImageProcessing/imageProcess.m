@@ -3,7 +3,7 @@ clear;
 
 %% Load image
 
-rgbImage = imread("15Sep2026/9kHz_20%_11mA.jpg");
+rgbImage = imread("15Sep2026new/9kHz_10%_6.8mA.jpg");
 % Creates 3D matrix:
 % The first dimension represents the height (rows).
 % The second dimension represents the width (columns).
