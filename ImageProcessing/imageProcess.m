@@ -1,5 +1,5 @@
 % Test of processing images for area calculation
-clear;
+clear; close all; clc;
 
 %% Load image
 
