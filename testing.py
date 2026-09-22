@@ -3,6 +3,7 @@ from cycler import cycler
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 plt.style.use('./custom.mplstyle')
 
@@ -18,10 +19,10 @@ ax.errorbar(x1, y1, yerr, fmt='o', markersize = 3, linewidth=1, capsize=2)
 ax.errorbar(x2, y2, yerr, fmt='s', markersize = 3, linewidth=1, capsize=2)
 plt.show()
 
+df = pd.read_excel('PulsingExperimentLog.xlsx', sheet_name = 'new, 50 mM, Ar')
 
 
-
-
+print(df)
 
 
 
