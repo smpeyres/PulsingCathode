@@ -21,6 +21,7 @@ sample_volts = [202, 191] # mV
 # sample_avg_current = to be obtained from the metadata!!! Is metadata the right word?
 
 # set dilution factor
+# ex: dilution = 2 if diluting 10 mL (200 mM IS) to 20 mL (100 mM IS) with DI.
 dilution = 2
 
 # --- End of Input ---
