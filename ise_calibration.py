@@ -67,7 +67,15 @@ sample_volts = [202, 191, 178.7] # mV
 # ex: dilution = 2 if diluting 10 mL (200 mM IS) to 20 mL (100 mM IS) with DI.
 dilution = 2
 
+# Below are inputs that change very little and therefore are currently hardcoded. 
+# volume
+vol_ml = 20 # mL
+# time
+time_hrs = 1 # hour
+
 # --- End of User Input ---
+
+# --- Start of Calculator ---
 
 # Get average currents for the samples from the master data file
 # Read the master data file into a pandas dataframe
@@ -86,15 +94,43 @@ num_stds = len(std_concs)
 if num_stds != len(std_volts):
     raise ValueError("The number of standard concentrations and voltages must match.")
 
+# Count number of measured samples to make sure lengths of arrays match
+num_samples = len(sample_names)
+if num_samples != len(sample_volts):
+    raise ValueError("The number of sample names and voltages must match.")
+
+# log10 concentrations
+std_concs_log = np.log10(std_concs)
+
+# linear regression
+# y = mx + b
+# y = ise voltage [mV]
+# m = slope [mV/decade]
+# x = log10 concentration [log10(mM)]
+# b = intercept [mV]
+res = stats.linregress(std_concs_log, std_volts)
+
+# Print result for quick user check
+print(f"R-squared: {res.rvalue**2:.6f}")
+print(f"Slope: {res.slope:.6f} mV/decade")
+
+# Calculate absolute percent errors
+calc_std_concs = 10**((std_volts - res.intercept)/res.slope)
+abs_per_error = np.abs( (std_concs - calc_std_concs)/std_concs )*100
+# Print to user up to 2 decimal points
+with np.printoptions(precision=2):
+    print(abs_per_error)
+# Recommendation: replace anything ≥10%
+
+# sample_concs = dilution*(10**((sample_volts - res.intercept)/res.slope))
+
 # Make a dataframe to store the data, with indexes/rows with the standard numbers
 df = pd.DataFrame({
-    'Sample': [f'Std {i+1}' for i in range(num_stds)],
+    # 'Sample': [f'Std {i+1}' for i in range(num_stds)] + ['NaClAc'] + sample_names,
+    'Sample' : [f'Std {i+1}' for i in range(num_stds)],
     'Concentration (mM)': std_concs,
     'Voltage (mV)': std_volts,
 })
-
-# 
-
 
 # Write it all to a .csv file in the directed directory
 # Need to implement the check for whether the file already exists.
@@ -106,49 +142,6 @@ with open(f'{data_dir}/{date}.csv', 'w') as file:
 
 
 
-
-
-
-# # set measurement date
-# date = datetime.date(2026, 9, 3)
-
-# # Add this data to a dataframe to be appended to the Excel file
-# df = pd.DataFrame({
-#     'Date': [date]})
-
-# with pd.ExcelWriter('ExperimentLog.xlsx', engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
-#     df.to_excel(writer, sheet_name="ISE Tracker", index=False)
-
-# ## Write to an existing file if date does not already exist in the file, otherwise throw an error
-# if date in pd.read_excel('ExperimentLog.xlsx', sheet_name="ISE Tracker")['Date'].values:
-#     print(f"Date {date} already exists in the Excel file. Please choose a different date.")
-# else:
-#     with pd.ExcelWriter('ExperimentLog.xlsx', engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
-#         df.to_excel(writer, sheet_name="ISE Tracker", index=False)
-
-
-
-
-
-
-
-# # measured std NaCl concentrations and measured voltages
-# std_concs = [0.1, 1, 5, 10] # mM
-# std_volts = [267, 210, 165.5, 148.3] # mV
-
-# # check solutions: NaClO4 blank and initial NaClAc
-# blank_NaClAc_volts = 232 # mV @ 50 mM, 150 mM NaClO4
-
-# # sample names, mesaured voltages, average currents
-# sample_names = ['18DCA', '16DCA']
-# sample_volts = [202, 191] # mV
-# # sample_avg_current = to be obtained from the 'master data file'
-
-# # set dilution factor
-# # ex: dilution = 2 if diluting 10 mL (200 mM IS) to 20 mL (100 mM IS) with DI.
-# dilution = 2
-
-# # --- End of Input ---
 
 
 # # --- Start of Calculator ---
