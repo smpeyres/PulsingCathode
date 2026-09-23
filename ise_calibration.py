@@ -1,12 +1,28 @@
-# -*- coding: utf-8 -*-
 import numpy as np
+import pandas as pd
 import datetime
 from scipy import stats
 
 # --- Start of Input ---
 
 # set measurement date
-date = datetime.date(2026, 9, 2)
+date = datetime.date(2026, 9, 3)
+
+# Add this data to a dataframe to be appended to the Excel file
+df = pd.DataFrame({
+    'Date': [date]})
+
+with pd.ExcelWriter('ExperimentLog.xlsx', engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+    df.to_excel(writer, sheet_name="ISE Tracker", index=False)
+
+## Write to an existing file if date does not already exist in the file, otherwise throw an error
+if date in pd.read_excel('ExperimentLog.xlsx', sheet_name="ISE Tracker")['Date'].values:
+    print(f"Date {date} already exists in the Excel file. Please choose a different date.")
+else:
+    with pd.ExcelWriter('ExperimentLog.xlsx', engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+        df.to_excel(writer, sheet_name="ISE Tracker", index=False)
+
+
 
 # measured std NaCl concentrations and measured voltages
 std_concs = [0.1, 1, 5, 10] # mM
