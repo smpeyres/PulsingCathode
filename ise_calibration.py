@@ -114,13 +114,18 @@ res = stats.linregress(std_concs_log, std_volts)
 print(f"R-squared: {res.rvalue**2:.6f}")
 print(f"Slope: {res.slope:.6f} mV/decade")
 
-# Calculate absolute percent errors
+# Calculate absolute percent errors - not stored, just for user check
 calc_std_concs = 10**((std_volts - res.intercept)/res.slope)
 abs_per_error = np.abs( (std_concs - calc_std_concs)/std_concs )*100
 # Print to user up to 2 decimal points
 with np.printoptions(precision=2):
     print(abs_per_error)
 # Recommendation: replace anything ≥10%
+
+
+
+
+
 
 # sample_concs = dilution*(10**((sample_volts - res.intercept)/res.slope))
 
