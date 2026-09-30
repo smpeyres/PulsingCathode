@@ -1,6 +1,10 @@
 Date: 2026-09-02
-Sample,Concentration (mM),Voltage (mV)
-Std 1,0.1,267.0
-Std 2,1.0,210.0
-Std 3,5.0,165.5
-Std 4,10.0,148.3
+Sample,Concentration (mM),Voltage (mV),Faradaic Efficiency (%)
+Std 1,0.1,267.0,0.0
+Std 2,1.0,210.0,0.0
+Std 3,5.0,165.5,0.0
+Std 4,10.0,148.3,0.0
+NaClAc,0.796,232.0,0.0
+18DCA,2.533,202.0,62.072
+16DCA,3.873,191.0,54.979
+17DCA,6.226,178.7,48.511

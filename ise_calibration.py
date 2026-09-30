@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import datetime
+import os
 from scipy import stats
 
 # Revised thoughts on how to store data.
@@ -53,25 +54,25 @@ master_data_file = "./MasterDataFiles/DC_Ar_50mM.csv"
 date = datetime.date(2026, 9, 2) # testing date
 
 # measured std NaCl concentrations and measured voltages
-std_concs = [0.1, 1, 5, 10] # mM
-std_volts = [267, 210, 165.5, 148.3] # mV
+std_concs = np.array([0.1, 1, 5, 10]) # mM
+std_volts = np.array([267, 210, 165.5, 148.3]) # mV
 
 # measured voltage for initial NaClAc
 blank_NaClAc_volts = 232 # mV @ 50 mM, 150 mM NaClO4
 
 # sample names and measured voltages
 sample_names = ['18DCA', '16DCA', '17DCA']
-sample_volts = [202, 191, 178.7] # mV
+sample_volts = np.array([202, 191, 178.7]) # mV
 
 # set dilution factor
 # ex: dilution = 2 if diluting 10 mL (200 mM IS) to 20 mL (100 mM IS) with DI.
-dilution = 2
+dilution = 2.0
 
 # Below are inputs that change very little and therefore are currently hardcoded. 
 # volume
-vol_ml = 20 # mL
+vol_ml = 20.0 # mL
 # time
-time_hrs = 1 # hour
+time_hrs = 1.0 # hour
 
 # --- End of User Input ---
 
@@ -119,63 +120,67 @@ calc_std_concs = 10**((std_volts - res.intercept)/res.slope)
 abs_per_error = np.abs( (std_concs - calc_std_concs)/std_concs )*100
 # Print to user up to 2 decimal points
 with np.printoptions(precision=2):
-    print(abs_per_error)
+    print(f"Abs. % Errors: {abs_per_error}")
 # Recommendation: replace anything ≥10%
 
+# Calculate Cl- concentration in NaClAc
+blank_NaClAc_conc = np.round(dilution*(10**((blank_NaClAc_volts - res.intercept)/res.slope)), 3)
 
+# Calculate sample Cl- concentrations in original sample pre-dilution
+sample_concs = np.round(dilution*(10**((sample_volts - res.intercept)/res.slope)), 3)
 
+# Calculate change in concentration for each sample relative to the blank NaClAc
+sample_concs_change = sample_concs - blank_NaClAc_conc
 
+# Calculate faradaic efficiency (FE) for each sample
+# FE = (change in concentration * volume * F) / (average current * time)
+# F = Faraday's constant = 96485 C/mol
+F = 96485 # C/mol
+FE = np.round((sample_concs_change * vol_ml * 1e-6 * F) / (np.array(sample_avg_currents)*1e-3 * time_hrs * 3600) * 100 , 3) # %
 
+# --- End of Calculator ---
 
-# sample_concs = dilution*(10**((sample_volts - res.intercept)/res.slope))
+# --- Start of Data Storage ---
 
 # Make a dataframe to store the data, with indexes/rows with the standard numbers
 df = pd.DataFrame({
     # 'Sample': [f'Std {i+1}' for i in range(num_stds)] + ['NaClAc'] + sample_names,
-    'Sample' : [f'Std {i+1}' for i in range(num_stds)],
-    'Concentration (mM)': std_concs,
-    'Voltage (mV)': std_volts,
+    'Sample' : [f'Std {i+1}' for i in range(num_stds)] + ['NaClAc'] + sample_names,
+    'Concentration (mM)': np.concatenate((std_concs, [blank_NaClAc_conc], sample_concs)),
+    'Voltage (mV)': np.concatenate((std_volts, [blank_NaClAc_volts], sample_volts)),
+    'Faradaic Efficiency (%)': np.concatenate((np.zeros(num_stds), [0], FE))
 })
 
-# Write it all to a .csv file in the directed directory
-# Need to implement the check for whether the file already exists.
-with open(f'{data_dir}/{date}.csv', 'w') as file:
+# Check to see if desired output file already exists
+output_file = f'{data_dir}/{date}.csv'
+if os.path.exists(output_file):
+    overwrite = input(
+        f'{output_file} already exists. Overwrite? (Y/N): '
+    ).strip().upper()
+    if overwrite != 'Y':
+        print('Halting. Please change the date and run the script again.')
+        raise SystemExit
+
+# Write df to a .csv file in the directed directory
+with open(output_file, 'w') as file:
     file.write(f'Date: {date}\n')
     df.to_csv(file, index=False)
 
+# Store data of ISE measurement and FE of each sample to master data file
+# Master data file location: ./MasterDataFiles/DC_Ar_50mM.csv
+# Append the data to the master data file
+# Preserve the first informational header row before reading and rewriting the dataframe.
+with open(master_data_file, 'r') as file:
+    master_header = file.readline()
 
+master_df = pd.read_csv(master_data_file, header=1)  # Skip the first row which is just info
+for i, name in enumerate(sample_names):
+    master_df.loc[master_df['Sample ID'] == name, 'ISE Date'] = date
+    master_df.loc[master_df['Sample ID'] == name, 'Faradaic Efficiency (%)'] = FE[i]
 
+with open(master_data_file, 'w') as file:
+    file.write(master_header)
+    master_df.to_csv(file, index=False)
 
-
-
-
-# # --- Start of Calculator ---
-
-# # log10 concentrations
-# std_concs_log = np.log10(std_concs)
-
-# # linear regression
-# # y = mx + b
-# # y = ise voltage [mV]
-# # m = slope [mV/decade]
-# # x = log10 concentration [log10(mM)]
-# # b = intercept [mV]
-
-# res = stats.linregress(std_concs_log, std_volts)
-# print(f"R-squared: {res.rvalue**2:.6f}")
-# print(f"Slope: {res.slope:.6f} mV/decade")
-
-# # Show figure
-
-# # calculate sample Cl- concentrations in original sample pre-dilution
-# # x = (y-b)/m
-# sample_concs = dilution*(10**((sample_volts - res.intercept)/res.slope))
-
-# # calculate Cl- concentration in NaClAc
-# blank_NaClAc_conc = dilution*(10**((blank_NaClAc_volts - res.intercept)/res.slope))
-
-# # calculate change in concentration
-# sample_concs_change = sample_concs - blank_NaClAc_conc
-
-# # --- End of Calculator ---
+# --- End of Data Storage ---
 
