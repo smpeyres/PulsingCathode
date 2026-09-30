@@ -9,3 +9,16 @@ Get a sampling, do a polyfit, see where the derivative is greatest, and cluster 
 
 Consider a very basic Bayesian analysis to pick points?
 
+2026-09-30
+
+A lot of images! Definitely save as a .csv file for people to download, do not put in as a table.
+
+Need to take more images - low frequency, low duty cycle.
+
+Need to repeat DC experiments now that 4 standards and 50 mM init is proceedure.
+
+Need to develop waveform analysis script. Make sure you understand what is happening!
+
+Write down what the image analysis script is doing. Automation not important - the essential parts of the data analysis is. 
+Do not go too long before doing this. You will forget the details if you try to describe them several months from now.
+
