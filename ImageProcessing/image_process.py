@@ -307,8 +307,8 @@ centroid_col = int(round(centroid_x)) - 1
 centroid_row = int(round(centroid_y)) - 1
 centroid_row = np.clip(centroid_row, 0, rows - 1)
 
-row_luminance = rescaled_gray[centroid_row, :]
-num_pixels = len(row_luminance)
+row_intensity = rescaled_gray[centroid_row, :]
+num_pixels = len(row_intensity)
 
 x_data = mm_per_pixel * np.linspace(
     -round(num_pixels / 2),
@@ -318,15 +318,15 @@ x_data = mm_per_pixel * np.linspace(
 
 # Initial Gaussian fit
 gaussian_initial_guess = [
-    np.max(row_luminance) - np.min(row_luminance),
-    x_data[np.argmax(row_luminance)],
+    np.max(row_intensity) - np.min(row_intensity),
+    x_data[np.argmax(row_intensity)],
     max((x_data[-1] - x_data[0]) / 6, 1e-6),
 ]
 
 gaussian_params, _ = curve_fit(
     gaussian,
     x_data,
-    row_luminance,
+    row_intensity,
     p0=gaussian_initial_guess,
     bounds=([-np.inf, -np.inf, 1e-12], np.inf),
     maxfev=100000,
@@ -334,7 +334,7 @@ gaussian_params, _ = curve_fit(
 
 # Gaussian plus fourth-degree polynomial background
 background_initial = [
-    np.min(row_luminance),
+    np.min(row_intensity),
     0,
     0,
     0,
@@ -346,7 +346,7 @@ full_initial_guess = background_initial + list(gaussian_params)
 fit_params, covariance = curve_fit(
     gaussian_with_background,
     x_data,
-    row_luminance,
+    row_intensity,
     p0=full_initial_guess,
     bounds=(
         [-np.inf] * 7 + [1e-12],
@@ -358,7 +358,7 @@ fit_params, covariance = curve_fit(
 fit_values = gaussian_with_background(x_data, *fit_params)
 
 plt.figure()
-plt.plot(x_data, row_luminance, "bo", markersize=3, label="Data")
+plt.plot(x_data, row_intensity, "bo", markersize=3, label="Data")
 plt.plot(x_data, fit_values, "r-", linewidth=2, label="Fit")
 plt.xlabel("Position (mm)")
 plt.ylabel("Intensity")
