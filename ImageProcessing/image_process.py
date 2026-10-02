@@ -5,15 +5,16 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
+import matplotlib
+matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
-from skimage.color import rgb2gray
 from skimage.exposure import rescale_intensity
 
 
-IMAGE_DIRECTORY = Path(__file__).resolve().parent / "15Sep2026new"
+IMAGE_DIRECTORY = Path(__file__).resolve().parent / "30Mar2026"
 
 TUBE_DIAMETER_MM = 6.35
 MASTER_RESULTS_PATH = (
@@ -48,12 +49,14 @@ def parse_image_metadata(image_path: Path):
     current_ma = None
 
     for part in parts:
-        if part.endswith("kHz"):
+        normalized_part = part.lower()
+        if normalized_part.endswith("khz"):
             frequency_hz = float(part[:-3]) * 1_000
-        elif part.endswith("Hz"):
+        elif normalized_part.endswith("hz"):
             frequency_hz = float(part[:-2])
-        elif part.endswith("%"):
-            duty_cycle = float(part[:-1])
+        elif part.endswith(("%", "per")):
+            suffix_length = 1 if part.endswith("%") else 3
+            duty_cycle = float(part[:-suffix_length])
         elif part.endswith("mA"):
             current_ma = float(part[:-2])
 
@@ -80,15 +83,19 @@ def save_results(date, image_filename, frequency, duty_cycle, set_current, disch
         "Area Margin (mm^2)": area_margin,
     }
 
-    if "Date" in results.columns and "Image Filename" in results.columns:
+    date_column = "Image Date" if "Image Date" in results.columns else "Date"
+    if date_column in results.columns and "Image Filename" in results.columns:
         duplicate_mask = (
-            results["Date"].astype(str).str.strip().eq(str(date))
+            results[date_column].astype(str).str.strip().eq(str(date))
             & results["Image Filename"].astype(str).str.strip().eq(str(image_filename))
         )
         if duplicate_mask.any():
             results = results.loc[~duplicate_mask].copy()
 
-    results = pd.concat([results, pd.DataFrame([record], columns=RESULT_COLUMNS)], ignore_index=True)
+    if results.empty:
+        results = pd.DataFrame([record], columns=RESULT_COLUMNS)
+    else:
+        results.loc[len(results), RESULT_COLUMNS] = [record[column] for column in RESULT_COLUMNS]
     results.to_csv(MASTER_RESULTS_PATH, index=False)
 
 
@@ -141,10 +148,12 @@ def wait_for_user():
     def close_on_click(_event):
         plt.close(figure)
 
-    figure.canvas.mpl_connect("button_press_event", close_on_click)
-    plt.show(block=False)
-    while plt.fignum_exists(figure.number):
-        plt.pause(0.1)
+    connection_id = figure.canvas.mpl_connect("button_press_event", close_on_click)
+    # Use the backend's blocking event loop rather than repeatedly calling
+    # plt.pause().  The polling loop can keep the GUI backend busy after the
+    # window is closed, making the following terminal input prompt lag.
+    plt.show(block=True)
+    figure.canvas.mpl_disconnect(connection_id)
     plt.close("all")
 
 def gaussian(x, amplitude, center, stddev):
@@ -169,6 +178,10 @@ if left_edge[0] > right_edge[0]:
     left_edge, right_edge = right_edge, left_edge
 
 pixel_diameter = abs(right_edge[0] - left_edge[0])
+if not np.isfinite(pixel_diameter) or pixel_diameter <= 0:
+    raise ValueError(
+        "The tube edge points must be distinct and have finite coordinates."
+    )
 mm_per_pixel = TUBE_DIAMETER_MM / pixel_diameter
 
 print(f"Conversion factor: {mm_per_pixel:.6g} mm/pixel")
@@ -244,27 +257,28 @@ plt.imshow(cropped_image)
 plt.title("Cropped ROI")
 wait_for_user()
 
-# Convert to grayscale and rescale.  Normalize explicitly before calling
-# skimage so invalid, integer, or alpha-channel image data cannot reach its
-# RGB matrix multiplication.
+# Convert to grayscale and rescale. Normalize the RGB data before applying
+# luminance coefficients so invalid or unusually scaled image data is safe.
 cropped_image = np.asarray(cropped_image)
 if cropped_image.ndim == 3:
     if cropped_image.shape[2] < 3:
         raise ValueError("The selected ROI has fewer than three color channels.")
     cropped_rgb = cropped_image[..., :3].astype(np.float64, copy=False)
-    finite_pixels = cropped_rgb[np.isfinite(cropped_rgb)]
-    if finite_pixels.size == 0:
+    if not np.isfinite(cropped_rgb).any():
         raise ValueError("The selected ROI contains no finite pixel values.")
-    image_min = finite_pixels.min()
-    image_max = finite_pixels.max()
+    cropped_rgb = np.nan_to_num(
+        cropped_rgb, nan=0.0, posinf=0.0, neginf=0.0
+    )
+    image_min = cropped_rgb.min()
+    image_max = cropped_rgb.max()
     if image_max > image_min:
         cropped_rgb = (cropped_rgb - image_min) / (image_max - image_min)
     else:
         cropped_rgb = np.zeros_like(cropped_rgb)
-    cropped_rgb = np.nan_to_num(
-        cropped_rgb, nan=0.0, posinf=1.0, neginf=0.0
+    cropped_rgb = np.clip(cropped_rgb, 0.0, 1.0)
+    cropped_gray = np.sum(
+        cropped_rgb * np.array([0.2125, 0.7154, 0.0721]), axis=2
     )
-    cropped_gray = rgb2gray(cropped_rgb)
 elif cropped_image.ndim == 2:
     cropped_gray = cropped_image.astype(np.float64, copy=False)
 else:
@@ -378,35 +392,33 @@ stddev_margin = np.sqrt(covariance[7, 7]) * 1.96  # 95% confidence interval
 area_margin = np.round(2 * np.pi * stddev * stddev_margin, 4) # dA = 2 * pi * r * dr
 print(f"Area error margin (95% CI): {area_margin:.6g} mm^2")
 
-# Save results to a .csv file using pandas
-# Open masterfile: ../MasterDataFiles/pulsed_image_data.csv
-# Append the results to the end of the file, replace if date + filename already exists
-# Fields:
-# Date, Image Filename, Frequency, Duty Cycle, Set Current, Discharge Height, Area, Area Margin
-date, image_filename, frequency, duty_cycle, set_current = parse_image_metadata(IMAGE_PATH)
-save_results(
-    date=date,
-    image_filename=image_filename,
-    frequency=frequency,
-    duty_cycle=duty_cycle,
-    set_current=set_current,
-    discharge_height=discharge_height,
-    area=area,
-    area_margin=area_margin,
-)
-print(f"Results saved to {MASTER_RESULTS_PATH}")
+repeat_selection = input(
+    "Repeat analysis for this image? [Y]es/[N]o: "
+).strip().lower()
+if repeat_selection not in {"y", "n"}:
+    raise ValueError("Please enter Y to repeat or N to continue.")
 
-if image_index + 1 < len(IMAGE_FILES):
-    repeat_selection = input(
-        "Repeat analysis for this image? [Y]es/[N]ext: "
-    ).strip().lower()
-    if repeat_selection not in {"y", "n"}:
-        raise ValueError("Please enter Y to repeat or N to continue.")
-else:
-    print("All images have been analyzed.")
+if repeat_selection == "n":
+    date, image_filename, frequency, duty_cycle, set_current = parse_image_metadata(IMAGE_PATH)
+    save_results(
+        date=date,
+        image_filename=image_filename,
+        frequency=frequency,
+        duty_cycle=duty_cycle,
+        set_current=set_current,
+        discharge_height=discharge_height,
+        area=area,
+        area_margin=area_margin,
+    )
+    print(f"Results saved to {MASTER_RESULTS_PATH}")
+
+if repeat_selection == "y":
+    next_index = image_index
+elif image_index + 1 == len(IMAGE_FILES):
     raise SystemExit(0)
+else:
+    next_index = image_index + 1
 
-next_index = image_index if repeat_selection == "y" else image_index + 1
 os.environ["PULSING_IMAGE_INDEX"] = str(next_index)
 os.execv(sys.executable, [sys.executable, str(Path(__file__).resolve())])
 
