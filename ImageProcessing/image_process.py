@@ -5,16 +5,13 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 from skimage.exposure import rescale_intensity
 
-
-IMAGE_DIRECTORY = Path(__file__).resolve().parent / "30Mar2026"
+IMAGE_DIRECTORY = Path(__file__).resolve().parent / "01Oct2026"
 
 TUBE_DIAMETER_MM = 6.35
 MASTER_RESULTS_PATH = (
