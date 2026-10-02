@@ -22,3 +22,6 @@ Need to develop waveform analysis script. Make sure you understand what is happe
 Write down what the image analysis script is doing. Automation not important - the essential parts of the data analysis is. 
 Do not go too long before doing this. You will forget the details if you try to describe them several months from now.
 
+2026-02-30
+
+Can only do the regression if I have waveform analysis. Prioritize this.
