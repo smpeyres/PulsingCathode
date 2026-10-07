@@ -1,6 +1,6 @@
 import re
 
-name = "_3.5ma0"
+name = "6.5ma0"
 
 # Find frequency pattern
 freq_pattern = re.compile(r"(\d+(?:\.\d+)?)(k?)hz", re.IGNORECASE) 
@@ -33,13 +33,21 @@ else:
     print("No duty cycle found.")
 
 # Find the current pattern
-current_pattern = re.compile(r"(\d+)(?:\.|_)?(\d+)?ma(0?)", re.IGNORECASE)
+current_pattern = re.compile(r"(\d+)(?:\.|_)?(\d+)?ma0?(?![a-z])", re.IGNORECASE)
 current_found = current_pattern.search(name)
 
 # Extract set current if present
-if current_found is n
-
-print(current_found.group(0))
-print(current_found.group(1))
-print(current_found.group(2))
-print(current_found.group(3))
+if current_found is not None:
+    print(f"Found set current, unformatted: {current_found.group(0)}")
+    part_pre = current_found.group(1) # get pre-decimal part
+    if current_found.group(2): # if a decimal exists
+        part_dec = current_found.group(2)
+        current_string = part_pre + "." + part_dec
+        current = float(current_string)
+        print(f"Extracted set current, mA: {current}")
+    else:
+        current = float(part_pre)
+        print(f"Extracted set current, mA: {current}")
+else:
+    current = float("nan")
+    print("No set current found.")
