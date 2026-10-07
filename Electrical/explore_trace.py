@@ -3,6 +3,12 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Import filename parsing script
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "SharedScripts"))
+import filename_parse
+
 # Import giant .csv file -> 1,000,000 points!
 df = pd.read_csv("30Mar2026/500Hz_25%_3mA.csv", header=0)
 print(f"Shape of imported data: {df.shape}")
@@ -83,3 +89,6 @@ ax.set_ylim(bottom=-15)
 ax.set_xlim(left=5e-4, right=2e-3)
 plt.legend()
 plt.savefig("current_explore_zoom.png",dpi=600)
+
+# Parse filename - testing import
+print(filename_parse("30Mar2026/500Hz_25%_3mA.csv"))
