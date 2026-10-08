@@ -3,24 +3,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Import filename parsing script
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "SharedScripts"))
-import filename_parse
-
 # Import giant .csv file -> 1,000,000 points!
 df = pd.read_csv("30Mar2026/500Hz_25%_3mA.csv", header=0)
 print(f"Shape of imported data: {df.shape}")
 print(f"Columns of .csv file: {df.columns}")
 print(f"Data types in dataframe: {df.dtypes}")
+print(df.head(2))
 
-"""
-pathlib.Path and a loop over Path("./30Mar2026").glob("*.csv")
-function explore_trace(path) — actually, why not do that now?
-Wrap what you have in a function that takes a path and returns the DataFrame, 
-then call it at the bottom.
-"""
 
 # Calculation of discrete time differences
 time_diff = df["Time(s)"].diff()
@@ -32,6 +21,7 @@ print(f"Maximum discrete different of time: {time_diff.max():.2e}")
 time_vals = df["Time(s)"].to_numpy()
 time_vals = time_vals - np.min(time_vals) # Set smallest time to zero
 CH3_vals = df["CH3(V)"].to_numpy()
+CH1_vals = df["CH1(V)"].to_numpy()
 
 # Create on_mask -> where CH3(V) < 0.5 V
 on_mask = CH3_vals < 0.5
@@ -40,17 +30,16 @@ print(f"Actual duty cycle: {100*actual_duty} %")
 
 fig, ax = plt.subplots()
 ax.plot(time_vals, CH3_vals, label="CH(3) Signal")
+ax.plot(time_vals, CH1_vals, label="CH(1) Signal")
 # ax.scatter(time_vals, CH3_vals, s=1)
 ax.scatter(time_vals, on_mask*np.ones_like(CH3_vals), s=1, color='r', label="On Mask")
 ax.set_xlabel("Time (s)")
 ax.set_ylabel("Voltage (V)")
-ax.set_ylim(bottom=-1.25)
 plt.legend()
 plt.savefig("CH3_explore.png",dpi=600)
 
 # Calculate current waveform from CH1
 shunt_res = 100e3 # 100 kOhm => 100e3 Ohm
-CH1_vals = df["CH1(V)"].to_numpy()
 I_shunt = (CH1_vals/shunt_res)*1e3 # mA
 # Grid check
 print(f"All possible values of current: {np.unique(np.round(I_shunt, 6))} mA")
@@ -89,6 +78,3 @@ ax.set_ylim(bottom=-15)
 ax.set_xlim(left=5e-4, right=2e-3)
 plt.legend()
 plt.savefig("current_explore_zoom.png",dpi=600)
-
-# Parse filename - testing import
-print(filename_parse("30Mar2026/500Hz_25%_3mA.csv"))
