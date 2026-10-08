@@ -1,6 +1,6 @@
 import re
 
-name = "6.5ma0"
+name = "3mA_25per_500Hz_30March2026_0"
 
 # Find frequency pattern
 freq_pattern = re.compile(r"(\d+(?:\.\d+)?)(k?)hz", re.IGNORECASE) 
@@ -51,3 +51,17 @@ if current_found is not None:
 else:
     current = float("nan")
     print("No set current found.")
+
+# Find the instance pattern
+instance_pattern = re.compile(r"_(\d+)$") # must be at end of string 
+instance_found = instance_pattern.search(name)
+
+# Extract instance if present, set to 1 otherwise
+if instance_found is None:
+    instance = 1
+    print(f"No instance provided. Assuming to be first instance.")
+elif int(instance_found.group(1)) == 0:
+    raise ValueError("Zeroth instance not accepted.")
+else:
+    instance = int(instance_found.group(1))
+    print(f"Instance of this condition: {instance}")
