@@ -61,7 +61,7 @@ if instance_found is None:
     instance = 1
     print(f"No instance provided. Assuming to be first instance.")
 elif int(instance_found.group(1)) == 0:
-    raise ValueError("Zeroth instance not accepted.")
+    instance = float("nan")
 else:
     instance = int(instance_found.group(1))
     print(f"Instance of this condition: {instance}")
