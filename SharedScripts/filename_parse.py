@@ -13,10 +13,14 @@ Examples:
 imports:
 re
 pathlib
-├─ TEST_CASES = [(name, expected), ...]        ← the table from last time
-├─ def parse_name(name) -> dict                ← the function
-├─ def run_tests(): ...                        ← assert loop over TEST_CASES
-└─ if __name__ == "__main__": run_tests()
+
+main function: filename_parse(filename)
+
+TEST_CASES = [(name, expected dict)]
+
+test function: run_tests()
+
+if __name__ == "__main__": run_tests()
 """
 
 import re
@@ -38,47 +42,36 @@ def filename_parse(filename):
 
     # Extract frequency value if present
     if freq_found is not None:
-        # print(f"Found frequency, unformatted: {freq_found.group(0)}")
         if freq_found.group(2): # if k is present -> an empty string is "falsy"
             freq = float(freq_found.group(1))*1000
-            # print(f"Extracted frequency, Hz: {freq}")
         else:
             freq = float(freq_found.group(1))
-            # print(f"Extracted frequency, Hz: {freq}")
     else:
-        freq = float("nan")
-        # print("No frequency found.")
+        freq = None
 
     # Find the duty cycle pattern
     duty_found = duty_pattern.search(file_stem)
 
     # Extract duty cycle value if present
     if duty_found is not None:
-        # print(f"Found duty cycle, unformatted: {duty_found.group(0)}")
         duty = float(duty_found.group(1))
-        # print(f"Extracted duty cycle, %: {duty}")
     else:
-        duty = float("nan")
-        # print("No duty cycle found.")
+        duty = None
 
     # Find the current pattern
     current_found = current_pattern.search(file_stem)
 
     # Extract set current if present
     if current_found is not None:
-        # print(f"Found set current, unformatted: {current_found.group(0)}")
         part_pre = current_found.group(1) # get pre-decimal part
         if current_found.group(2): # if a decimal exists
             part_dec = current_found.group(2)
             current_string = part_pre + "." + part_dec
             current = float(current_string)
-            # print(f"Extracted set current, mA: {current}")
         else:
             current = float(part_pre)
-            # print(f"Extracted set current, mA: {current}")
     else:
-        current = float("nan")
-        # print("No set current found.")
+        current = None
 
     # Find the instance pattern
     instance_found = instance_pattern.search(file_stem)
@@ -86,15 +79,41 @@ def filename_parse(filename):
     # Extract instance if present, set to 1 otherwise
     if instance_found is None:
         instance = 1
-        # print(f"No instance provided. Assuming to be first instance.")
     elif int(instance_found.group(1)) == 0:
-        instance = float("nan")
+        instance = None
     else:
         instance = int(instance_found.group(1))
-        # print(f"Instance of this condition: {instance}")
 
     parameter_dict = dict([("freq_hz", freq), ("duty_%", duty), ("current_ma", current), ("instance_#", instance)]) 
 
     return parameter_dict
 
+TEST_CASES = [
+    ("500Hz_25%_3mA.csv", {"freq_hz": 500.0, "duty_%": 25.0, "current_ma": 3.0, "instance_#": 1}),
+    ("9kHz_10%_8.5mA_2.csv", {"freq_hz": 9000.0, "duty_%": 10.0, "current_ma": 8.5, "instance_#": 2}),
+    ("30March2026.jpg", {"freq_hz": None, "duty_%": None, "current_ma": None, "instance_#": 1}),
+    ("9.5kHz_2.5%_8.7mA.csv", {"freq_hz": 9500.0, "duty_%": 2.5, "current_ma": 8.7, "instance_#": 1}),
+    ("2khz_10%_3.5mA.csv", {"freq_hz": 2000.0, "duty_%": 10, "current_ma": 3.5, "instance_#": 1}),
+    ("3mA_25per_500Hz_30March2026.jpg", {"freq_hz": 500.0, "duty_%": 25, "current_ma": 3.0, "instance_#": 1}),
+    ("7khz_2.5%_6.5ma0.csv", {"freq_hz": 7000.0, "duty_%": 2.5, "current_ma": 6.5, "instance_#": 1}),
+]
 
+def run_tests():
+    passed = 0
+    failed = 0
+    number_tests = len(TEST_CASES)
+    for name, expected in TEST_CASES:
+        actual = filename_parse(name)
+        if actual == expected:
+            print("PASS")
+            passed +=1
+        else:
+            print("FAIL")
+            print(f"Expected dict: {expected}")
+            print(f"Actual dict: {actual}")
+            failed +=1
+    print(f"{passed}/{number_tests} passed, {failed}/{number_tests} failed")
+    return
+
+if __name__ == "__main__":
+    run_tests()    
