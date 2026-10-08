@@ -1,67 +1,16 @@
-import re
+from filename_parse import filename_parse
 
-name = "3mA_25per_500Hz_30March2026_0"
+name1 = "500Hz_25%_3mA.csv"
+dict1 = filename_parse(name1)
+print(dict1)
 
-# Find frequency pattern
-freq_pattern = re.compile(r"(\d+(?:\.\d+)?)(k?)hz", re.IGNORECASE) 
-freq_found = freq_pattern.search(name)
+name2 = "9.5kHz_2.5%_8.7mA.csv"
+print(filename_parse(name2))
 
-# Extract frequency value if present
-if freq_found is not None:
-    print(f"Found frequency, unformatted: {freq_found.group(0)}")
-    if freq_found.group(2): # if k is present -> an empty string is "falsy"
-        freq = float(freq_found.group(1))*1000
-        print(f"Extracted frequency, Hz: {freq}")
-    else:
-        freq = float(freq_found.group(1))
-        print(f"Extracted frequency, Hz: {freq}")
-else:
-    freq = float("nan")
-    print("No frequency found.")
+print(filename_parse("9kHz_10%_8.5mA_2.csv"))
 
-# Find the duty cycle pattern
-duty_pattern = re.compile(r"(\d+(?:\.\d+)?)(?:%|per)", re.IGNORECASE)
-duty_found = duty_pattern.search(name)
+print(filename_parse("2khz_10%_3.5mA.csv"))
 
-# Extract duty cycle value if present
-if duty_found is not None:
-    print(f"Found duty cycle, unformatted: {duty_found.group(0)}")
-    duty = duty_found.group(1)
-    print(f"Extracted duty cycle, %: {duty}")
-else:
-    duty = float("nan")
-    print("No duty cycle found.")
+print(filename_parse("3mA_25per_500Hz_30March2026.jpg"))
 
-# Find the current pattern
-current_pattern = re.compile(r"(\d+)(?:\.|_)?(\d+)?ma0?(?![a-z])", re.IGNORECASE)
-current_found = current_pattern.search(name)
-
-# Extract set current if present
-if current_found is not None:
-    print(f"Found set current, unformatted: {current_found.group(0)}")
-    part_pre = current_found.group(1) # get pre-decimal part
-    if current_found.group(2): # if a decimal exists
-        part_dec = current_found.group(2)
-        current_string = part_pre + "." + part_dec
-        current = float(current_string)
-        print(f"Extracted set current, mA: {current}")
-    else:
-        current = float(part_pre)
-        print(f"Extracted set current, mA: {current}")
-else:
-    current = float("nan")
-    print("No set current found.")
-
-# Find the instance pattern
-instance_pattern = re.compile(r"_(\d+)$") # must be at end of string 
-instance_found = instance_pattern.search(name)
-
-# Extract instance if present, set to 1 otherwise
-if instance_found is None:
-    instance = 1
-    print(f"No instance provided. Assuming to be first instance.")
-elif int(instance_found.group(1)) == 0:
-    instance = float("nan")
-else:
-    instance = int(instance_found.group(1))
-    print(f"Instance of this condition: {instance}")
+print(filename_parse("7khz_2.5%_6.5ma0.csv"))
