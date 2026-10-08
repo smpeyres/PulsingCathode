@@ -1,3 +1,4 @@
-from filename_parse import filename_parse
+from batch_parse import batch_parse
 
-print(filename_parse("30March2026.jpg"))
+folder = "../Electrical/30Mar2026"
+print(batch_parse(folder))
