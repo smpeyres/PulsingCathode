@@ -1,5 +1,5 @@
 Info: 50 mM initial NaClCH2CO2 (+150 mM NaClO4), 1 hour, 100 sccm Ar, 20 + 20 mL membrane split cell
-Sample ID,Plasma Date,Average Current (mA),ISE Date,Faradaic Efficiency (%)
+Sample ID,Plasma Date,Average Current (mA),ISE Date,faradaic_efficiency_%
 18DCA,1999-09-09,1.5,2026-09-02,62.072
 16DCA,1999-09-09,3.0,2026-09-02,54.979
 17DCA,1999-09-09,6.0,2026-09-02,48.511

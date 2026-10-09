@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Import giant .csv file -> 1,000,000 points!
-df = pd.read_csv("30Mar2026/500Hz_25%_3mA.csv", header=0)
+df = pd.read_csv("09_17/7khz_2.5%_6.6ma.csv", header=0)
 print(f"Shape of imported data: {df.shape}")
 print(f"Columns of .csv file: {df.columns}")
 print(f"Data types in dataframe: {df.dtypes}")
@@ -30,7 +30,7 @@ print(f"Actual duty cycle: {100*actual_duty} %")
 
 fig, ax = plt.subplots()
 ax.plot(time_vals, CH3_vals, label="CH(3) Signal")
-ax.plot(time_vals, CH1_vals, label="CH(1) Signal")
+# ax.plot(time_vals, CH1_vals, label="CH(1) Signal")
 # ax.scatter(time_vals, CH3_vals, s=1)
 ax.scatter(time_vals, on_mask*np.ones_like(CH3_vals), s=1, color='r', label="On Mask")
 ax.set_xlabel("Time (s)")
@@ -55,7 +55,6 @@ ax.plot(time_vals, I_shunt, label="w/out Mask")
 ax.plot(time_vals, I_shunt_masked, color='r', label="w/ Mask")
 ax.set_xlabel("Time (s)")
 ax.set_ylabel("Shunt Current (mA)")
-ax.set_ylim(bottom=-15)
 plt.legend()
 plt.savefig("current_explore.png",dpi=600)
 
