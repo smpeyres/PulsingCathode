@@ -1,9 +1,9 @@
-import numpy as np
 from analyze_waveform import analyze_waveform
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "SharedScripts"))
 from filename_parse import filename_parse
+import pandas as pd
 
 def batch_analyze_waveform(folder, collection_date):
     """For each waveform CSV in folder: filename metadata + computed scalars.
@@ -30,3 +30,10 @@ def batch_analyze_waveform(folder, collection_date):
         # Append dict as row to rows
         rows.append(row)
     return rows
+
+if __name__ == "__main__":          # ← the guard, bottom of the file
+    rows = batch_analyze_waveform("./30Mar2026", "2026-03-30")   # your real folder path
+    df = pd.DataFrame(rows)          # one construction call
+    print(df)                        # the full table
+    print(df.dtypes)
+    # casualty report goes here
