@@ -16,7 +16,7 @@ def batch_analyze_waveform(folder, collection_date):
         if not item.is_file():
             continue
         # if item is not .csv, skip
-        if item.suffix not in (".csv"):  
+        if item.suffix != ".csv":  
             continue
         # get the file name
         row = {}

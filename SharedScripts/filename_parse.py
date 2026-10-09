@@ -84,18 +84,18 @@ def filename_parse(filename):
     else:
         instance = int(instance_found.group(1))
 
-    parameter_dict = dict([("freq_hz", freq), ("duty_%", duty), ("current_ma", current), ("instance_#", instance)]) 
+    parameter_dict = dict([("freq_Hz", freq), ("duty_%", duty), ("set_current_mA", current), ("instance_#", instance)]) 
 
     return parameter_dict
 
 TEST_CASES = [
-    ("500Hz_25%_3mA.csv", {"freq_hz": 500.0, "duty_%": 25.0, "current_ma": 3.0, "instance_#": 1}),
-    ("9kHz_10%_8.5mA_2.csv", {"freq_hz": 9000.0, "duty_%": 10.0, "current_ma": 8.5, "instance_#": 2}),
-    ("30March2026.jpg", {"freq_hz": None, "duty_%": None, "current_ma": None, "instance_#": 1}),
-    ("9.5kHz_2.5%_8.7mA.csv", {"freq_hz": 9500.0, "duty_%": 2.5, "current_ma": 8.7, "instance_#": 1}),
-    ("2khz_10%_3.5mA.csv", {"freq_hz": 2000.0, "duty_%": 10, "current_ma": 3.5, "instance_#": 1}),
-    ("3mA_25per_500Hz_30March2026.jpg", {"freq_hz": 500.0, "duty_%": 25, "current_ma": 3.0, "instance_#": 1}),
-    ("7khz_2.5%_6.5ma0.csv", {"freq_hz": 7000.0, "duty_%": 2.5, "current_ma": 6.5, "instance_#": 1}),
+    ("500Hz_25%_3mA.csv", {"freq_Hz": 500.0, "duty_%": 25.0, "set_current_mA": 3.0, "instance_#": 1}),
+    ("9kHz_10%_8.5mA_2.csv", {"freq_Hz": 9000.0, "duty_%": 10.0, "set_current_mA": 8.5, "instance_#": 2}),
+    ("30March2026.jpg", {"freq_Hz": None, "duty_%": None, "set_current_mA": None, "instance_#": 1}),
+    ("9.5kHz_2.5%_8.7mA.csv", {"freq_Hz": 9500.0, "duty_%": 2.5, "set_current_mA": 8.7, "instance_#": 1}),
+    ("2khz_10%_3.5mA.csv", {"freq_Hz": 2000.0, "duty_%": 10, "set_current_mA": 3.5, "instance_#": 1}),
+    ("3mA_25per_500Hz_30March2026.jpg", {"freq_Hz": 500.0, "duty_%": 25, "set_current_mA": 3.0, "instance_#": 1}),
+    ("7khz_2.5%_6.5ma0.csv", {"freq_Hz": 7000.0, "duty_%": 2.5, "set_current_mA": 6.5, "instance_#": 1}),
 ]
 
 def run_tests():
