@@ -42,7 +42,7 @@ def analyze_waveform(csv_path):
     I_shunt_on_std = np.std(I_shunt_on) # quantization "staircase", not noise -> but still useful to define spread of peak.
     I_shunt_masked_mean = I_shunt_on_mean*duty
     
-    return {"time_monotonic": time_ok, "duty_%": duty*100, "peak_current_mA": I_shunt_on_mean, "peak_current_std_mA": I_shunt_on_std, "average_current_mA": I_shunt_masked_mean}
+    return {"time_monotonic": time_ok, "measured_duty_%": duty*100, "peak_current_mA": I_shunt_on_mean, "peak_current_std_mA": I_shunt_on_std, "average_current_mA": I_shunt_masked_mean}
     
     
 if __name__ == "__main__":
