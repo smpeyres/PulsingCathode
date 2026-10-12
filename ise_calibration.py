@@ -48,21 +48,21 @@ from scipy import stats
 data_dir = "./ISE"
 
 # Identify relevant Master Data File
-master_data_file = "./MasterDataFiles/DC_Ar_50mM.csv"
+master_data_file = "./MasterDataFiles/Ar_50mM_pulsed.csv"
 
 # set measurement date
-date = datetime.date(2026, 9, 2) # testing date
+date = datetime.date(2026, 10, 5) # testing date
 
 # measured std NaCl concentrations and measured voltages
 std_concs = np.array([0.1, 1, 5, 10]) # mM
-std_volts = np.array([267, 210, 165.5, 148.3]) # mV
+std_volts = np.array([257, 201, 157.6, 142.0]) # mV
 
 # measured voltage for initial NaClAc
-blank_NaClAc_volts = 232 # mV @ 50 mM, 150 mM NaClO4
+blank_NaClAc_volts = 226 # mV @ 50 mM, 150 mM NaClO4
 
 # sample names and measured voltages
-sample_names = ['18DCA', '16DCA', '17DCA']
-sample_volts = np.array([202, 191, 178.7]) # mV
+sample_names = ['2.5_4','2.5_5','2.5_6','2.5_7','2.5_8','2.5_9']
+sample_volts = np.array([208,214,208,213,201,208]) # mV
 
 # set dilution factor
 # ex: dilution = 2 if diluting 10 mL (200 mM IS) to 20 mL (100 mM IS) with DI.
@@ -80,15 +80,17 @@ time_hrs = 1.0 # hour
 
 # Get average currents for the samples from the master data file
 # Read the master data file into a pandas dataframe
-master_df = pd.read_csv(master_data_file, header=1)  # Skip the first row which is just info
+master_df = pd.read_csv(master_data_file, header=0)  # Skip the first row which is just info
 
 # Extract the average currents for the samples
 sample_avg_currents = []
 for name in sample_names:
-    if name not in master_df['Sample ID'].values:
+    if name not in master_df['sample_ID'].values:
         raise ValueError(f"Sample name {name} not found in the master data file.") 
     else:
-        sample_avg_currents.append(master_df.loc[master_df['Sample ID'] == name, 'Average Current (mA)'].values[0])
+        sample_avg_currents.append(master_df.loc[master_df['sample_ID'] == name, 'average_current_mA'].values[0])
+# flip sign
+sample_avg_currents = np.multiply(sample_avg_currents,-1)
 
 # Count number of standards and make sure the lengths of the arrays match
 num_stds = len(std_concs)
@@ -166,6 +168,7 @@ with open(output_file, 'w') as file:
     file.write(f'Date: {date}\n')
     df.to_csv(file, index=False)
 
+"""
 # Store data of ISE measurement and FE of each sample to master data file
 # Master data file location: ./MasterDataFiles/DC_Ar_50mM.csv
 # Append the data to the master data file
@@ -181,6 +184,7 @@ for i, name in enumerate(sample_names):
 with open(master_data_file, 'w') as file:
     file.write(master_header)
     master_df.to_csv(file, index=False)
+"""
 
 # --- End of Data Storage ---
 

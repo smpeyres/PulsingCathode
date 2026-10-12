@@ -91,9 +91,9 @@ def store_waveform_to_masterfile(rows, masterfile_path):
     return master_df
 
 if __name__ == "__main__":          # ← the guard, bottom of the file
-    directory = "./09_28"
-    collection_date = "2026-09-28"
-    masterfile = "../MasterDataFiles/sample_pulsed.csv"
+    directory = "./10_05"
+    collection_date = "2026-10-05"
+    masterfile = "../MasterDataFiles/Ar_50mM_pulsed.csv"
     rows = batch_analyze_waveform(directory, collection_date)   # your real folder path
     df = store_waveform_to_masterfile(rows, masterfile)
     print(df)
