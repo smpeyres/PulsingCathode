@@ -10,7 +10,6 @@ print(f"Columns of .csv file: {df.columns}")
 print(f"Data types in dataframe: {df.dtypes}")
 print(df.head(2))
 
-
 # Calculation of discrete time differences
 time_diff = df["Time(s)"].diff()
 print(f"Minimum discrete difference of time: {time_diff.min():.2e}. Should be zero.")
@@ -21,7 +20,6 @@ print(f"Maximum discrete different of time: {time_diff.max():.2e}")
 time_vals = df["Time(s)"].to_numpy()
 time_vals = time_vals - np.min(time_vals) # Set smallest time to zero
 CH3_vals = df["CH3(V)"].to_numpy()
-CH1_vals = df["CH1(V)"].to_numpy()
 
 # Create on_mask -> where CH3(V) < 0.5 V
 on_mask = CH3_vals < 0.5
@@ -30,17 +28,43 @@ print(f"Actual duty cycle: {100*actual_duty} %")
 
 fig, ax = plt.subplots()
 ax.plot(time_vals, CH3_vals, label="CH(3) Signal")
-# ax.plot(time_vals, CH1_vals, label="CH(1) Signal")
-# ax.scatter(time_vals, CH3_vals, s=1)
 ax.scatter(time_vals, on_mask*np.ones_like(CH3_vals), s=1, color='r', label="On Mask")
 ax.set_xlabel("Time (s)")
 ax.set_ylabel("Voltage (V)")
 plt.legend()
 plt.savefig("CH3_explore.png",dpi=600)
 
+# Get high-voltage channels
+CH1_vals = df["CH1(V)"].to_numpy() 
+CH2_vals = df["CH2(V)"].to_numpy()
+
+# Use to get voltage across shunt, cell
+shunt_voltage = CH1_vals
+cell_voltage = CH2_vals - shunt_voltage
+
+# Plot voltages
+fig2, ax = plt.subplots()
+ax.scatter(time_vals, shunt_voltage*1e-3, s=1, label="Shunt Voltage")
+ax.scatter(time_vals, cell_voltage*1e-3, s=1, label="Cell Voltage")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Voltage (kV)")
+plt.legend()
+plt.savefig("voltage_explore.png",dpi=600)
+
+# Plot voltages
+fig3, ax = plt.subplots()
+ax.scatter(time_vals, shunt_voltage*1e-3, s=1, label="Shunt Voltage")
+ax.scatter(time_vals, cell_voltage*1e-3, s=1, label="Cell Voltage")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Voltage (kV)")
+ax.set_xlim(left=0.9e-4, right=1.5e-4)
+plt.legend()
+plt.savefig("voltage_explore_zoom.png",dpi=600)
+
+"""
 # Calculate current waveform from CH1
 shunt_res = 100e3 # 100 kOhm => 100e3 Ohm
-I_shunt = (CH1_vals/shunt_res)*1e3 # mA
+I_shunt = (shunt_voltage/shunt_res)*1e3 # mA
 # Grid check
 print(f"All possible values of current: {np.unique(np.round(I_shunt, 6))} mA")
 
@@ -86,3 +110,5 @@ ax.set_ylabel("Cell Voltage (V)")
 ax.set_xlim(left=0.9e-4, right=1.5e-4)
 plt.legend()
 plt.savefig("cell_voltage_zoomed.png",dpi=600)
+
+"""
