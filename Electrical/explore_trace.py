@@ -42,10 +42,15 @@ CH2_vals = df["CH2(V)"].to_numpy()
 shunt_voltage = CH1_vals
 cell_voltage = CH2_vals - shunt_voltage
 
+# Calculate the cell voltage at breakdown
+breakdown_cell = np.min(cell_voltage)
+print(f"Cell voltage at breakdown, kV: {breakdown_cell}")
+
 # Plot voltages
 fig2, ax = plt.subplots()
 ax.scatter(time_vals, shunt_voltage*1e-3, s=1, label="Shunt Voltage")
 ax.scatter(time_vals, cell_voltage*1e-3, s=1, label="Cell Voltage")
+ax.axhline(breakdown_cell*1e-3, label="Cell Voltage @ Breakdown")
 ax.set_xlabel("Time (s)")
 ax.set_ylabel("Voltage (kV)")
 plt.legend()
@@ -55,16 +60,16 @@ plt.savefig("voltage_explore.png",dpi=600)
 fig3, ax = plt.subplots()
 ax.scatter(time_vals, shunt_voltage*1e-3, s=1, label="Shunt Voltage")
 ax.scatter(time_vals, cell_voltage*1e-3, s=1, label="Cell Voltage")
+ax.axhline(breakdown_cell*1e-3, color='r', label="Cell Voltage @ Breakdown")
 ax.set_xlabel("Time (s)")
 ax.set_ylabel("Voltage (kV)")
-ax.set_xlim(left=0.9e-4, right=1.5e-4)
+ax.set_xlim(left=2e-4, right=3e-4)
 plt.legend()
 plt.savefig("voltage_explore_zoom.png",dpi=600)
 
-"""
 # Calculate current waveform from CH1
 shunt_res = 100e3 # 100 kOhm => 100e3 Ohm
-I_shunt = (shunt_voltage/shunt_res)*1e3 # mA
+I_shunt = (shunt_voltage/shunt_res) # A
 # Grid check
 print(f"All possible values of current: {np.unique(np.round(I_shunt, 6))} mA")
 
@@ -74,9 +79,9 @@ print(f"Average current across waveform w/out correction: {np.round(I_shunt_mean
 I_shunt_masked = I_shunt*on_mask
 
 # Plot current waveform
-fig2, ax = plt.subplots()
-ax.plot(time_vals, I_shunt, label="w/out Mask")
-ax.plot(time_vals, I_shunt_masked, color='r', label="w/ Mask")
+fig4, ax = plt.subplots()
+ax.plot(time_vals, I_shunt*1e3, label="w/out Mask")
+ax.plot(time_vals, I_shunt_masked*1e3, color='r', label="w/ Mask")
 ax.set_xlabel("Time (s)")
 ax.set_ylabel("Shunt Current (mA)")
 plt.legend()
@@ -92,23 +97,34 @@ print(f"Standard dev. of peak current: {I_shunt_on_std:.6f} mA")
 print(f"Average current across waveform w/ correction: {I_shunt_corrected_mean:.6f} mA")
 
 # Plot current pulse - zoom
-fig3, ax = plt.subplots()
-ax.scatter(time_vals, I_shunt, s=1, label="w/out Mask")
-ax.scatter(time_vals, I_shunt_masked, s=1, color='r', label="w/ Mask")
+fig5, ax = plt.subplots()
+ax.scatter(time_vals, I_shunt*1e3, s=1, label="w/out Mask")
+# ax.scatter(time_vals, I_shunt_masked, s=1, color='r', label="w/ Mask")
 ax.set_xlabel("Time (s)")
 ax.set_ylabel("Shunt Current (mA)")
-ax.set_xlim(left=0.9e-4, right=1.5e-4)
+ax.set_xlim(left=2e-4, right=3e-4)
 plt.legend()
 plt.savefig("current_explore_zoom.png",dpi=600)
 
-# Plot CH2 - zoom
-CH2_vals = df["CH2(V)"].to_numpy()
-fig4, ax = plt.subplots()
-ax.scatter(time_vals, CH2_vals, s=1)
-ax.set_xlabel("Time (s)")
-ax.set_ylabel("Cell Voltage (V)")
-ax.set_xlim(left=0.9e-4, right=1.5e-4)
-plt.legend()
-plt.savefig("cell_voltage_zoomed.png",dpi=600)
+# Calculate source voltage
+ballast_res = 20e3
+source_voltage = cell_voltage + (ballast_res + shunt_res)*I_shunt
 
-"""
+# Plot source voltage
+fig6, ax = plt.subplots()
+ax.scatter(time_vals, source_voltage*1e-3, s=1)
+# ax.scatter(time_vals, I_shunt_masked, s=1, color='r', label="w/ Mask")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Source Voltage (kV)")
+plt.legend()
+plt.savefig("source_voltage_explore.png",dpi=600)
+
+# Plot source voltage - zoomed
+fig7, ax = plt.subplots()
+ax.scatter(time_vals, source_voltage*1e-3, s=1)
+# ax.scatter(time_vals, I_shunt_masked, s=1, color='r', label="w/ Mask")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Source Voltage (kV)")
+ax.set_xlim(left=2e-4, right=3e-4)
+plt.legend()
+plt.savefig("source_voltage_zoom.png",dpi=600)
