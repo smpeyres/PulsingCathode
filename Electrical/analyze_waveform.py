@@ -10,6 +10,9 @@ def analyze_waveform(csv_path):
     
     # import csv as dataframe
     df = pd.read_csv(csv_path, header=0)
+
+    
+
     
     # Calculation of minimum discrete time differences
     time_diff_min = df["Time(s)"].diff().min()
