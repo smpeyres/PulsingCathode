@@ -1,52 +1,67 @@
 import pandas as pd
 import numpy as np
-# import sys
-# from pathlib import Path
-# sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "SharedScripts"))
-# from filename_parse import filename_parse
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "SharedScripts"))
+from filename_parse import filename_parse
 
-def analyze_waveform(csv_path):
+def analyze_waveform(csv_name):
     """ Read one RIGOL waveform CSV, compute quantities, and return a dict of scalars"""
     
     # import csv as dataframe
-    df = pd.read_csv(csv_path, header=0)
+    df = pd.read_csv(csv_name, header=0)
 
-    
+    # Extract quantities from csv_name
+    parameters = filename_parse(csv_name)
+    frequency = parameters['freq_Hz']
+    duty_per = parameters['duty_%']
 
+    # Calculate period, pulse width
+    period = 1/frequency
+    pulse_width = period*duty_per/100
+
+    # Extract time values
+    time_raw = df["Time(s)"].to_numpy()
+    # True resolution =/= displayed resolution
+    # Take total time / number of timesteps
+    true_time_res = (time_raw[-1] - time_raw[0]) / (len(df) - 1) 
+    # Make linear array with original length with true time resolution
+    time_vals = np.arange(len(df)) * true_time_res
+
+    # Calculate number of timesteps in a period
+    num_steps_per_period = int(round(period/true_time_res))
+
+    # Calculate number of whole periods in trace
+    num_periods = int(time_vals[-1] // period)
+
+    # Get voltage drop across downstream ballast 
+    down_ballast_voltage = df["CH1(V)"].to_numpy()
+
+    # Find the off states of the downstream ballast
+    treshold_frac = 0.02
+    off_mask = down_ballast_voltage > treshold_frac*np.min(down_ballast_voltage) 
+
+    # Use off mask to calculate offset voltage
+    offset_voltage = np.mean(down_ballast_voltage[off_mask])
+    down_ballast_voltage_true = down_ballast_voltage - offset_voltage
     
-    # Calculation of minimum discrete time differences
-    time_diff_min = df["Time(s)"].diff().min()
-    if time_diff_min < 0.0:
-        time_ok = False
-    else:
-        time_ok = True
+    # Set downstream ballast resistance
+    down_ballast_res = 100e3
+
+    # Calculate instantaneous conduction current across downstream ballast
+    cond_current_down_ballast = down_ballast_voltage_true/down_ballast_res
+
+    # Calculate charge delivered across whole periods
+    charge_total_whole_periods = np.trapezoid(cond_current_down_ballast[0:num_periods*num_steps_per_period], time_vals[0:num_periods*num_steps_per_period])
+
+    # Calculate average charge delivered per period
+    charge_per_period = charge_total_whole_periods/num_periods
+
+    # Calculate ideal peak current
+    ideal_peak_current = charge_per_period/pulse_width
     
-    # Define on mask as when CH3 is less than 0.5 V
-    CH3_vals = df["CH3(V)"].to_numpy()
-    on_mask = CH3_vals < 0.5
-    
-    # Guard clause
-    if not on_mask.any():
-        return {"time_monotonic": time_ok, "duty_%": None, "peak_current_mA": None, "peak_current_std_mA": None, "average_current_mA": None}
-    
-   
-    # Calculate duty cycle
-    duty = np.mean(on_mask*np.ones_like(CH3_vals))
-    
-    # Calculate current waveform from CH1 -> negative current as convention
-    shunt_res = 100e3 # 100 kOhm => 100e3 Ohm
-    CH1_vals = df["CH1(V)"].to_numpy()
-    I_shunt = (CH1_vals/shunt_res)*1e3 # mA
-    
-    # Calculate "masked" shunt current -> positive stuff is not "real"
-    I_shunt_masked = I_shunt*on_mask
-    I_shunt_on = I_shunt_masked[on_mask]
-    I_shunt_on_mean = np.mean(I_shunt_on)
-    I_shunt_on_std = np.std(I_shunt_on) # quantization "staircase", not noise -> but still useful to define spread of peak.
-    I_shunt_masked_mean = I_shunt_on_mean*duty
-    
-    return {"time_monotonic": time_ok, "measured_duty_%": duty*100, "peak_current_mA": I_shunt_on_mean, "peak_current_std_mA": I_shunt_on_std, "average_current_mA": I_shunt_masked_mean}
-    
-    
+    return {"charge_per_period_uC": charge_per_period/1e-6, "ideal_peak_current_mA": ideal_peak_current/1e-3}
+
 if __name__ == "__main__":
-    analyze_waveform("30Mar2026/1kHz_5%_5mA.csv")
+    res = analyze_waveform("30Mar2026/1kHz_5%_5mA.csv")
+    print(res)

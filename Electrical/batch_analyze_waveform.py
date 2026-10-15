@@ -79,8 +79,7 @@ def store_waveform_to_masterfile(rows, masterfile_path):
                       suffixes=("", "_new"))
 
     # Fill in the na's
-    computed_cols = ["source_file", "time_monotonic", "measured_duty_%",
-                 "peak_current_mA", "peak_current_std_mA", "average_current_mA"]
+    computed_cols = ["source_file", "charge_per_period_uC", "ideal_peak_current_mA"]
 
     for col in computed_cols:
         new_col = col + "_new"
@@ -91,8 +90,8 @@ def store_waveform_to_masterfile(rows, masterfile_path):
     return master_df
 
 if __name__ == "__main__":          # ← the guard, bottom of the file
-    directory = "./10_05"
-    collection_date = "2026-10-05"
+    directory = "./09_17"
+    collection_date = "2026-09-17"
     masterfile = "../MasterDataFiles/Ar_50mM_pulsed.csv"
     rows = batch_analyze_waveform(directory, collection_date)   # your real folder path
     df = store_waveform_to_masterfile(rows, masterfile)

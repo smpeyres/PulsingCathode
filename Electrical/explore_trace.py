@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Step 2: Import trace .csv as dataframe
-df = pd.read_csv("09_17/7khz_2.5%_6.6ma.csv", header=0)
+df = pd.read_csv("30Mar2026/1kHz_5%_5mA.csv", header=0)
 print(f"Shape of imported data: {df.shape}")
 print(f"Columns of .csv file: {df.columns}")
 print(f"Data types in dataframe: {df.dtypes}")
@@ -14,8 +14,8 @@ print(df.head(2))
 shunt_res = 100e3
 
 # Step 4: Set pulsing parameters -> pulled from file name later
-duty_per = 2.5
-freq = 7.0e3
+duty_per = 5
+freq = 1.0e3
 period = 1/freq
 pulse_width = period*duty_per/100
 
@@ -85,14 +85,14 @@ print(vals, counts)
 # Step 12: Apply on-mask to shunt conduction current
 # Find the on segments of the source voltage
 on_treshold_frac = 0.02
-on_mask_current = shunt_cond_current < on_treshold_frac*np.min(shunt_cond_current) 
+on_mask_shunt = shunt_voltage < on_treshold_frac*np.min(shunt_voltage) 
 
-mean_offset_current = np.mean(shunt_cond_current[~on_mask_current])
+mean_offset_current = np.mean(shunt_cond_current[~on_mask_shunt])
 corrected_shunt_current = shunt_cond_current - mean_offset_current
 
 fig5, ax = plt.subplots()
 ax.scatter(time_vals/1e-3, shunt_cond_current/1e-3, s=1, label="Raw Shunt Cond. Current")
-ax.scatter(time_vals[on_mask_current]/1e-3, shunt_cond_current[on_mask_current]/1e-3, s=1, label="Raw Shunt Cond. Current w/ Mask")
+ax.scatter(time_vals[on_mask_shunt]/1e-3, shunt_cond_current[on_mask_shunt]/1e-3, s=1, label="Raw Shunt Cond. Current w/ Mask")
 ax.scatter(time_vals/1e-3, corrected_shunt_current/1e-3, s=1, label="Corrected Shunt Cond. Current")
 ax.set_xlabel("Time (ms)")
 ax.set_ylabel("Current (mA)")
