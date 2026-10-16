@@ -4,65 +4,24 @@ import datetime
 import os
 from scipy import stats
 
-# Revised thoughts on how to store data.
-# Create a seperate folder/directory called "ISE" -> done. 
-# In that folder, each experiment will have its own csv file.
-# Easy to write to and read from.
-# User (me) will input ISE information in this script.
-# Script will write to a new csv file once analysis is complete.
-
-# If a csv file already exists for that date,
-# The script will first ask whether to overwrite the file or not.
-# User provides y or n.
-# If y, the script will overwrite the file.
-# If n, the script will halt and ask the user to choose a different date.
-
-# Structure of CSV file
-# Header will include date, dilution factor as user-defined information
-# Header will also include the slope, intercept, and R^2 value calculated.
-# Data will be stored in a simple column and row format.
-# Columns: Cl- concentration (mM), measured voltage (mV), and faradaic efficiency (%)
-
-# Rows will be: std #1, ... std #N, init NaClAc, sample ID #1, ..., sample ID #N
-# Concentration and voltage for standards are known and measured, respectively.
-# For FE, standards will be left with NaN.
-# Voltages for initial NaClAc, and samples are measured and concentrations are calculated.
-# FE for initial NaClAc will be left with NaN.
-# FE for samples will be calculated and stored in the file only if an average current is provided.
-
-# For numbering of standards, 
-# the number will be based on the number of concentrations reported in array.
-# Exact ordering is not important for data storage, 
-# just that std1 and std2 and so on have the right concentrations and voltages associated with them.
-# For the samples, 
-# the user will provide the sample names in an array and the measured voltages in a separate array.
-
-# For average current, 
-# the script will obtain the average current from the 'master data file' based on the sample name provided by the user.
-
-# End of thoughts on how to store data.
-
 # --- Start of User Input ---
 
-# Identify directory to store data
-data_dir = "./ISE"
-
 # Identify relevant Master Data File
-master_data_file = "./MasterDataFiles/Ar_50mM_pulsed.csv"
+master_data_file = "../MasterDataFiles/Ar_50mM_pulsed.csv"
 
 # set measurement date
-date = datetime.date(2026, 10, 5) # testing date
+date = datetime.date(2026, 9, 19) # testing date
 
 # measured std NaCl concentrations and measured voltages
 std_concs = np.array([0.1, 1, 5, 10]) # mM
-std_volts = np.array([257, 201, 157.6, 142.0]) # mV
+std_volts = np.array([255, 202, 161.4, 144.1]) # mV
 
 # measured voltage for initial NaClAc
-blank_NaClAc_volts = 226 # mV @ 50 mM, 150 mM NaClO4
+blank_NaClAc_volts = 222 # mV @ 50 mM, 150 mM NaClO4
 
 # sample names and measured voltages
-sample_names = ['2.5_4','2.5_5','2.5_6','2.5_7','2.5_8','2.5_9']
-sample_volts = np.array([208,214,208,213,201,208]) # mV
+sample_names = ['2.5_1']
+sample_volts = np.array([195.9]) # mV
 
 # set dilution factor
 # ex: dilution = 2 if diluting 10 mL (200 mM IS) to 20 mL (100 mM IS) with DI.
@@ -82,15 +41,23 @@ time_hrs = 1.0 # hour
 # Read the master data file into a pandas dataframe
 master_df = pd.read_csv(master_data_file, header=0)  # Skip the first row which is just info
 
-# Extract the average currents for the samples
-sample_avg_currents = []
+# Extract: frequencies, charge per period
+sample_frequency = []
+sample_charge_per_period = []
 for name in sample_names:
     if name not in master_df['sample_ID'].values:
         raise ValueError(f"Sample name {name} not found in the master data file.") 
     else:
-        sample_avg_currents.append(master_df.loc[master_df['sample_ID'] == name, 'average_current_mA'].values[0])
-# flip sign
-sample_avg_currents = np.multiply(sample_avg_currents,-1)
+        sample_frequency.append(master_df.loc[master_df['sample_ID'] == name, 'freq_Hz'].values[0])
+        sample_charge_per_period.append(master_df.loc[master_df['sample_ID'] == name, 'charge_per_period_uC'].values[0])
+# flip sign, put into Coulombs
+sample_charge_per_period = np.multiply(sample_charge_per_period,-1e-6)
+
+# Calculate number of periods in total time
+sample_num_periods = np.multiply(sample_frequency, time_hrs*3600)
+
+# Calculate total charge delivered
+sample_total_charge = sample_charge_per_period*sample_num_periods
 
 # Count number of standards and make sure the lengths of the arrays match
 num_stds = len(std_concs)
@@ -138,7 +105,7 @@ sample_concs_change = sample_concs - blank_NaClAc_conc
 # FE = (change in concentration * volume * F) / (average current * time)
 # F = Faraday's constant = 96485 C/mol
 F = 96485 # C/mol
-FE = np.round((sample_concs_change * vol_ml * 1e-6 * F) / (np.array(sample_avg_currents)*1e-3 * time_hrs * 3600) * 100 , 3) # %
+FE = np.round((sample_concs_change * vol_ml * 1e-6 * F) / (np.array(sample_total_charge)) * 100 , 3) # %
 
 # --- End of Calculator ---
 
@@ -154,7 +121,7 @@ df = pd.DataFrame({
 })
 
 # Check to see if desired output file already exists
-output_file = f'{data_dir}/{date}.csv'
+output_file = f'{date}.csv'
 if os.path.exists(output_file):
     overwrite = input(
         f'{output_file} already exists. Overwrite? (Y/N): '

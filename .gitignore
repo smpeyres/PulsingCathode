@@ -4,3 +4,4 @@
 *.spyproject
 ~$*
 /.spyproject
+.DS_Store
